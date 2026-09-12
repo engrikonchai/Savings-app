@@ -1,17 +1,16 @@
 import React, { useMemo, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { ScreenContainer, Card, Button, TextField } from '../src/components';
 import { PressableScale } from '../src/components/PressableScale';
+import { GoalDateField } from '../src/components/GoalDateField';
 import { getGoalTypeMeta } from '../src/constants/goalTypes';
 import { GoalType } from '../src/types/models';
 import { useGoalContext } from '../src/store/GoalContext';
 import { colors, radius, spacing, typography } from '../src/theme';
-import { formatDateLong } from '../src/utils/date';
 
 function defaultTargetDate(): Date {
   const date = new Date();
@@ -30,7 +29,6 @@ export default function CreateGoalScreen() {
   const [name, setName] = useState('');
   const [amountText, setAmountText] = useState('');
   const [targetDate, setTargetDate] = useState<Date>(defaultTargetDate());
-  const [showDatePicker, setShowDatePicker] = useState(Platform.OS === 'ios');
   const [imageUri, setImageUri] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
@@ -109,27 +107,11 @@ export default function CreateGoalScreen() {
         />
 
         <Text style={styles.label}>Target date</Text>
-        {Platform.OS === 'android' && (
-          <PressableScale
-            style={styles.dateButton}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text style={styles.dateButtonText}>{formatDateLong(targetDate.toISOString())}</Text>
-          </PressableScale>
-        )}
-        {showDatePicker && (
-          <DateTimePicker
-            value={targetDate}
-            mode="date"
-            minimumDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={(_, selectedDate) => {
-              if (Platform.OS === 'android') setShowDatePicker(false);
-              if (selectedDate) setTargetDate(selectedDate);
-            }}
-            themeVariant="light"
-          />
-        )}
+        <GoalDateField
+          value={targetDate}
+          minimumDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
+          onChange={setTargetDate}
+        />
 
         <Text style={[styles.label, { marginTop: spacing.md }]}>Goal photo (optional)</Text>
         <PressableScale style={styles.imagePicker} onPress={pickImage}>
@@ -182,18 +164,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
-  },
-  dateButton: {
-    backgroundColor: colors.creamMuted,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    minHeight: 56,
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  dateButtonText: {
-    ...typography.h3,
-    color: colors.inkPrimary,
   },
   imagePicker: {
     borderRadius: radius.md,

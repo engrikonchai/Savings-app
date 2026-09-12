@@ -11,13 +11,15 @@ import {
   StatTile,
   MotivationCard,
   FloatingActionButton,
+  PressableScale,
+  CarBuildVisual,
 } from '../../src/components';
 import { useGoalContext } from '../../src/store/GoalContext';
 import { calculateGoalProgress, calculateTargetStatus } from '../../src/utils/goalMath';
 import { formatCurrency } from '../../src/utils/currency';
 import { formatDateShort } from '../../src/utils/date';
 import { getGoalTypeMeta } from '../../src/constants/goalTypes';
-import { colors, spacing, typography } from '../../src/theme';
+import { colors, radius, spacing, typography } from '../../src/theme';
 
 export default function HomeScreen() {
   const { goal, transactions, settings } = useGoalContext();
@@ -32,6 +34,8 @@ export default function HomeScreen() {
   const meta = getGoalTypeMeta(goal.type);
   const currency = settings.currency;
   const isZeroState = progress.percent === 0 && !progress.isComplete;
+  const heroContent =
+    goal.type === 'car' && !goal.imageUri ? <CarBuildVisual percent={progress.percent} /> : undefined;
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
@@ -61,6 +65,7 @@ export default function HomeScreen() {
             strokeWidth={14}
             imageUri={goal.imageUri}
             iconName={meta.silhouetteIcon}
+            heroContent={heroContent}
           >
             <Text style={styles.percent}>{progress.percent}%</Text>
             <Text style={styles.ringLabel}>funded</Text>
@@ -122,7 +127,17 @@ export default function HomeScreen() {
       </ScrollView>
 
       <View style={styles.fabWrap} pointerEvents="box-none">
-        <FloatingActionButton label="Add money" onPress={() => router.push('/add-transaction')} />
+        <View style={styles.fabRow}>
+          <PressableScale
+            style={styles.realityCheckButton}
+            haptic="light"
+            onPress={() => router.push('/reality-check')}
+          >
+            <Ionicons name="help-circle-outline" size={16} color={colors.textPrimary} />
+            <Text style={styles.realityCheckText}>Should I buy it?</Text>
+          </PressableScale>
+          <FloatingActionButton label="Add money" onPress={() => router.push('/add-transaction')} />
+        </View>
       </View>
     </ScreenContainer>
   );
@@ -232,7 +247,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   fabSpacer: {
-    height: 140,
+    height: 150,
   },
   fabWrap: {
     position: 'absolute',
@@ -240,5 +255,25 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: spacing.lg,
     alignItems: 'center',
+  },
+  fabRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  realityCheckButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  realityCheckText: {
+    ...typography.caption,
+    color: colors.textPrimary,
   },
 });

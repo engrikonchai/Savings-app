@@ -17,6 +17,13 @@ export function daysFromToday(toIso: string): number {
   return daysBetween(new Date().toISOString(), toIso);
 }
 
+/** Returns a new ISO date string offset from `iso` by a (possibly fractional, rounded) number of days. */
+export function addDays(iso: string, days: number): string {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + Math.round(days));
+  return d.toISOString();
+}
+
 export function formatDateShort(iso: string): string {
   const date = new Date(iso);
   return date.toLocaleDateString(undefined, {

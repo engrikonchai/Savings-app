@@ -47,6 +47,10 @@ function RootNavigator() {
         options={{ presentation: 'modal' }}
       />
       <Stack.Screen
+        name="reality-check"
+        options={{ presentation: 'modal' }}
+      />
+      <Stack.Screen
         name="result"
         options={{ presentation: 'modal', gestureEnabled: false }}
       />

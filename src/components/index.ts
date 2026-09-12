@@ -13,3 +13,5 @@ export * from './PhoneShell';
 export * from './PressableScale';
 export * from './LogoMark';
 export * from './ShareCard';
+export * from './CarBuildVisual';
+export * from './SwipeDecisionCard';

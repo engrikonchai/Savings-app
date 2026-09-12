@@ -57,7 +57,7 @@ export function calculateGoalProgress(
  * "runway" one currency unit is worth, derived from the goal's total
  * timeline. Used to translate a single transaction into a day shift.
  */
-function dayValuePerUnit(goal: Goal): number {
+export function dayValuePerUnit(goal: Goal): number {
   const totalDays = Math.max(1, daysBetween(goal.createdAt, goal.targetDate));
   if (goal.targetAmount <= 0) return 0;
   return totalDays / goal.targetAmount;
@@ -71,6 +71,16 @@ function dayValuePerUnit(goal: Goal): number {
 export function calculateDayShift(goal: Goal, signedAmount: number): number {
   const perUnit = dayValuePerUnit(goal);
   return Math.round(signedAmount * perUnit);
+}
+
+/**
+ * "Dream Days" — the unrounded number of days a given amount is worth
+ * against the goal's pace. Used by the Reality Check flow to show a
+ * precise, emotionally legible cost ("this costs you 1.4 Dream Days")
+ * before rounding to a whole-day target-date shift.
+ */
+export function calculateDreamDays(goal: Goal, amount: number): number {
+  return Math.abs(amount) * dayValuePerUnit(goal);
 }
 
 export interface TargetStatus {

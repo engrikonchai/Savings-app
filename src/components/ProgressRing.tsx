@@ -25,6 +25,8 @@ interface ProgressRingProps {
   iconName?: keyof typeof Ionicons.glyphMap;
   /** Ratio the fill animation starts from (default 0) — used to animate an incremental change. */
   initialProgress?: number;
+  /** Custom hero visual (e.g. the "Build Your Car" reward) shown instead of the icon silhouette when no photo is set. */
+  heroContent?: React.ReactNode;
   children?: React.ReactNode;
 }
 
@@ -35,6 +37,7 @@ export function ProgressRing({
   imageUri,
   iconName = 'sparkles',
   initialProgress = 0,
+  heroContent,
   children,
 }: ProgressRingProps) {
   const radius = (size - strokeWidth) / 2;
@@ -116,7 +119,9 @@ export function ProgressRing({
             end={{ x: 0.9, y: 1 }}
             style={styles.iconSilhouetteWrap}
           >
-            <Ionicons name={iconName} size={innerDiameter * 0.5} color="rgba(107,255,206,0.32)" />
+            {heroContent ?? (
+              <Ionicons name={iconName} size={innerDiameter * 0.5} color="rgba(107,255,206,0.32)" />
+            )}
           </LinearGradient>
         )}
       </View>

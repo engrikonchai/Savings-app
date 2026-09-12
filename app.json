@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "CarGoal",
+    "slug": "cargoal",
+    "scheme": "cargoal",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#14171A",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cargoal.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#14171A",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.cargoal.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#14171A",
+          "image": "./assets/icon.png",
+          "imageWidth": 140
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "CarGoal uses your photos to let you add a picture of your goal."
+        }
+      ]
+    ]
+  }
+}

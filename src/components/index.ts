@@ -11,3 +11,5 @@ export * from './MotivationCard';
 export * from './FloatingActionButton';
 export * from './PhoneShell';
 export * from './PressableScale';
+export * from './LogoMark';
+export * from './ShareCard';

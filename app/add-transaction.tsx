@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,9 +15,13 @@ const KIND_OPTIONS: { value: TransactionKind; label: string }[] = [
   { value: 'spent', label: 'Money spent' },
 ];
 
+const QUICK_AMOUNTS = [5, 10, 20, 50];
+const SOURCE_OPTIONS = ['Tips', 'Salary', 'Gift', 'Other'];
+
 export default function AddTransactionScreen() {
   const { goal, addTransaction } = useGoalContext();
   const router = useRouter();
+  const amountInputRef = useRef<TextInput>(null);
 
   const [kind, setKind] = useState<TransactionKind>('saved');
   const [amountText, setAmountText] = useState('');
@@ -72,6 +76,7 @@ export default function AddTransactionScreen() {
 
       <Card style={styles.card}>
         <TextField
+          ref={amountInputRef}
           label="Amount"
           placeholder="50"
           prefix="€"
@@ -80,6 +85,34 @@ export default function AddTransactionScreen() {
           onChangeText={setAmountText}
           autoFocus
         />
+
+        <View style={styles.quickAmounts}>
+          {QUICK_AMOUNTS.map((quick) => {
+            const selected = amountText === String(quick);
+            return (
+              <PressableScale
+                key={quick}
+                style={[styles.quickChip, selected && styles.quickChipSelected]}
+                haptic="selection"
+                onPress={() => setAmountText(String(quick))}
+              >
+                <Text style={[styles.quickChipText, selected && styles.quickChipTextSelected]}>€{quick}</Text>
+              </PressableScale>
+            );
+          })}
+          <PressableScale
+            style={styles.quickChip}
+            haptic="selection"
+            onPress={() => {
+              setAmountText('');
+              amountInputRef.current?.focus();
+            }}
+          >
+            <Ionicons name="create-outline" size={14} color={colors.inkPrimary} />
+            <Text style={styles.quickChipText}>Custom</Text>
+          </PressableScale>
+        </View>
+
         <TextField
           label="Note (optional)"
           placeholder={kind === 'saved' ? 'Birthday money' : 'Weekend out'}
@@ -87,21 +120,25 @@ export default function AddTransactionScreen() {
           onChangeText={setNote}
           maxLength={60}
         />
-      </Card>
 
-      <View style={styles.quickAmounts}>
-        {[10, 25, 50, 100].map((quick) => (
-          <PressableScale
-            key={quick}
-            style={styles.quickChip}
-            haptic="selection"
-            onPress={() => setAmountText(String(quick))}
-          >
-            <Ionicons name="add" size={14} color={colors.textPrimary} />
-            <Text style={styles.quickChipText}>€{quick}</Text>
-          </PressableScale>
-        ))}
-      </View>
+        {kind === 'saved' && (
+          <View style={styles.sourceRow}>
+            {SOURCE_OPTIONS.map((source) => {
+              const selected = note === source;
+              return (
+                <PressableScale
+                  key={source}
+                  style={[styles.sourceChip, selected && styles.sourceChipSelected]}
+                  haptic="selection"
+                  onPress={() => setNote(selected ? '' : source)}
+                >
+                  <Text style={[styles.sourceChipText, selected && styles.sourceChipTextSelected]}>{source}</Text>
+                </PressableScale>
+              );
+            })}
+          </View>
+        )}
+      </Card>
 
       <View style={styles.footer}>
         <Button
@@ -144,23 +181,57 @@ const styles = StyleSheet.create({
   },
   quickAmounts: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
-    marginTop: spacing.md,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
   },
   quickChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
     borderRadius: 999,
-    backgroundColor: colors.glass,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
+    backgroundColor: colors.creamMuted,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  quickChipSelected: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accentDark,
   },
   quickChipText: {
     ...typography.caption,
-    color: colors.textPrimary,
+    color: colors.inkPrimary,
+  },
+  quickChipTextSelected: {
+    color: colors.inkPrimary,
+  },
+  sourceRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: -spacing.xs,
+  },
+  sourceChip: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: 999,
+    backgroundColor: colors.creamMuted,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  sourceChipSelected: {
+    backgroundColor: colors.accentDark,
+    borderColor: colors.accentDark,
+  },
+  sourceChipText: {
+    ...typography.caption,
+    color: colors.inkSecondary,
+  },
+  sourceChipTextSelected: {
+    color: colors.cream,
   },
   footer: {
     marginTop: spacing.xl,

@@ -10,6 +10,8 @@ export interface GoalTypeMeta {
   silhouetteIcon: keyof typeof Ionicons.glyphMap;
   namePlaceholder: string;
   defaultName: string;
+  /** Encouraging 0%-progress copy for the dashboard, given a formatted "first deposit" amount. */
+  zeroStateCopy: (amountLabel: string) => string;
 }
 
 export const GOAL_TYPES: GoalTypeMeta[] = [
@@ -20,6 +22,7 @@ export const GOAL_TYPES: GoalTypeMeta[] = [
     silhouetteIcon: 'car-sport',
     namePlaceholder: 'e.g. Golf 5',
     defaultName: 'My First Car',
+    zeroStateCopy: (amount) => `Your first ${amount} gets the wheels turning.`,
   },
   {
     type: 'travel',
@@ -28,6 +31,7 @@ export const GOAL_TYPES: GoalTypeMeta[] = [
     silhouetteIcon: 'airplane',
     namePlaceholder: 'e.g. Summer in Greece',
     defaultName: 'Dream Trip',
+    zeroStateCopy: (amount) => `Your first ${amount} books the first mile.`,
   },
   {
     type: 'phone',
@@ -36,6 +40,7 @@ export const GOAL_TYPES: GoalTypeMeta[] = [
     silhouetteIcon: 'phone-portrait',
     namePlaceholder: 'e.g. iPhone 17 Pro',
     defaultName: 'New Phone',
+    zeroStateCopy: (amount) => `Your first ${amount} powers things up.`,
   },
   {
     type: 'custom',
@@ -44,6 +49,7 @@ export const GOAL_TYPES: GoalTypeMeta[] = [
     silhouetteIcon: 'flag',
     namePlaceholder: 'e.g. Emergency Fund',
     defaultName: 'My Goal',
+    zeroStateCopy: (amount) => `Your first ${amount} gets the ball rolling.`,
   },
 ];
 

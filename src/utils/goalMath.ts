@@ -1,5 +1,5 @@
 import { Goal, Transaction } from '../types/models';
-import { daysBetween, daysFromToday } from './date';
+import { daysBetween, daysFromToday, formatDateShort } from './date';
 
 export interface GoalProgress {
   savedAmount: number;
@@ -43,7 +43,7 @@ export function calculateGoalProgress(
     remainingAmount,
     progressRatio,
     rawProgressRatio,
-    percent: Math.round(rawProgressRatio * 100),
+    percent: Math.max(0, Math.round(rawProgressRatio * 100)),
     daysLeft,
     isPastDue,
     dailyNeeded,
@@ -71,4 +71,43 @@ function dayValuePerUnit(goal: Goal): number {
 export function calculateDayShift(goal: Goal, signedAmount: number): number {
   const perUnit = dayValuePerUnit(goal);
   return Math.round(signedAmount * perUnit);
+}
+
+export interface TargetStatus {
+  /** Positive = ahead of the pace needed to hit the target on time, negative = behind. */
+  daysAheadBehind: number;
+  label: string;
+}
+
+/**
+ * Friendly "on track" read-out: compares how much should have been saved by
+ * now (a straight-line pace from goal creation to target date) against what
+ * has actually been saved, and expresses the gap in days.
+ */
+export function calculateTargetStatus(goal: Goal, progress: GoalProgress): TargetStatus {
+  if (progress.isComplete) {
+    return { daysAheadBehind: 0, label: 'Goal reached — nice work!' };
+  }
+  if (progress.isPastDue) {
+    return { daysAheadBehind: 0, label: 'Past your target date' };
+  }
+
+  const totalDays = Math.max(1, daysBetween(goal.createdAt, goal.targetDate));
+  const elapsedDaysRaw = daysBetween(goal.createdAt, new Date().toISOString());
+  const elapsedDays = Math.min(totalDays, Math.max(0, elapsedDaysRaw));
+  const expectedAmount = (elapsedDays / totalDays) * goal.targetAmount;
+  const perUnit = dayValuePerUnit(goal);
+  const daysAheadBehind = Math.round((progress.savedAmount - expectedAmount) * perUnit);
+
+  let label: string;
+  if (Math.abs(daysAheadBehind) < 1) {
+    label = `On track for ${formatDateShort(goal.targetDate)}`;
+  } else if (daysAheadBehind > 0) {
+    label = `${daysAheadBehind} day${daysAheadBehind === 1 ? '' : 's'} ahead of plan`;
+  } else {
+    const behind = Math.abs(daysAheadBehind);
+    label = `${behind} day${behind === 1 ? '' : 's'} behind — you can catch up`;
+  }
+
+  return { daysAheadBehind, label };
 }

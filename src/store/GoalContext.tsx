@@ -31,6 +31,8 @@ export interface NewGoalInput {
   targetAmount: number;
   targetDate: string;
   imageUri?: string;
+  /** Optional amount already saved before tracking started; defaults to 0. */
+  startingAmount?: number;
 }
 
 export interface NewTransactionInput {
@@ -73,18 +75,30 @@ export function GoalProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const createGoal = useCallback(async (input: NewGoalInput) => {
+    const now = new Date().toISOString();
     const newGoal: Goal = {
       id: generateId(),
       type: input.type,
       name: input.name.trim(),
       targetAmount: input.targetAmount,
       targetDate: input.targetDate,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
       imageUri: input.imageUri,
     };
+    const initialTransactions: Transaction[] = [];
+    if (input.startingAmount && input.startingAmount > 0) {
+      initialTransactions.push({
+        id: generateId(),
+        goalId: newGoal.id,
+        kind: 'saved',
+        amount: Math.round(input.startingAmount),
+        note: 'Starting balance',
+        createdAt: now,
+      });
+    }
     setGoal(newGoal);
-    setTransactions([]);
-    await Promise.all([saveGoal(newGoal), saveTransactions([])]);
+    setTransactions(initialTransactions);
+    await Promise.all([saveGoal(newGoal), saveTransactions(initialTransactions)]);
     return newGoal;
   }, []);
 

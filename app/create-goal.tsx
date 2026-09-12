@@ -11,6 +11,7 @@ import { GoalDateField } from '../src/components/GoalDateField';
 import { getGoalTypeMeta } from '../src/constants/goalTypes';
 import { GoalType } from '../src/types/models';
 import { useGoalContext } from '../src/store/GoalContext';
+import { formatCurrency } from '../src/utils/currency';
 import { colors, radius, spacing, typography } from '../src/theme';
 
 function defaultTargetDate(): Date {
@@ -22,20 +23,25 @@ function defaultTargetDate(): Date {
 export default function CreateGoalScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ type?: string }>();
-  const { createGoal } = useGoalContext();
+  const { createGoal, settings } = useGoalContext();
 
   const goalType = (params.type as GoalType) ?? 'custom';
   const meta = useMemo(() => getGoalTypeMeta(goalType), [goalType]);
 
   const [name, setName] = useState('');
   const [amountText, setAmountText] = useState('');
+  const [startingAmountText, setStartingAmountText] = useState('');
   const [targetDate, setTargetDate] = useState<Date>(defaultTargetDate());
   const [imageUri, setImageUri] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
 
   const amount = parseFloat(amountText.replace(',', '.'));
+  const startingAmountRaw = parseFloat(startingAmountText.replace(',', '.'));
+  const startingAmount = Number.isNaN(startingAmountRaw) ? 0 : Math.max(0, startingAmountRaw);
   const isValid = name.trim().length > 0 && !Number.isNaN(amount) && amount > 0 && targetDate > new Date();
+  const showStartingPreview = startingAmount > 0 && !Number.isNaN(amount) && amount > 0;
+  const startingPercent = showStartingPreview ? Math.round(Math.min(1, startingAmount / amount) * 100) : 0;
 
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -67,6 +73,7 @@ export default function CreateGoalScreen() {
         targetAmount: Math.round(amount),
         targetDate: targetDate.toISOString(),
         imageUri,
+        startingAmount,
       });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace('/(tabs)');
@@ -108,6 +115,26 @@ export default function CreateGoalScreen() {
             setError(undefined);
           }}
         />
+
+        <TextField
+          label="Already saved (optional)"
+          placeholder="0"
+          prefix="€"
+          keyboardType="decimal-pad"
+          value={startingAmountText}
+          onChangeText={setStartingAmountText}
+        />
+        <Text style={styles.microcopy}>Start where you are — every euro counts.</Text>
+        {showStartingPreview && (
+          <View style={styles.previewPill}>
+            <Text style={styles.previewText}>
+              {formatCurrency(startingAmount, settings.currency)}
+              <Text style={styles.previewTextMuted}> / {formatCurrency(amount, settings.currency)}</Text>
+              {'  ·  '}
+              {startingPercent}% funded
+            </Text>
+          </View>
+        )}
 
         <Text style={styles.label}>Target date</Text>
         <GoalDateField
@@ -175,6 +202,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
+  },
+  microcopy: {
+    ...typography.caption,
+    color: colors.inkTertiary,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
+  previewPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.accentSoft,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  previewText: {
+    ...typography.caption,
+    color: colors.accentDark,
+  },
+  previewTextMuted: {
+    color: colors.inkTertiary,
   },
   imagePicker: {
     borderRadius: radius.md,

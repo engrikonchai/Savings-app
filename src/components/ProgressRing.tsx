@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, {
   useAnimatedProps,
@@ -22,6 +23,8 @@ interface ProgressRingProps {
   imageUri?: string;
   /** Line-icon silhouette shown when no photo is set. */
   iconName?: keyof typeof Ionicons.glyphMap;
+  /** Ratio the fill animation starts from (default 0) — used to animate an incremental change. */
+  initialProgress?: number;
   children?: React.ReactNode;
 }
 
@@ -31,11 +34,12 @@ export function ProgressRing({
   strokeWidth = 18,
   imageUri,
   iconName = 'sparkles',
+  initialProgress = 0,
   children,
 }: ProgressRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const animatedProgress = useSharedValue(0);
+  const animatedProgress = useSharedValue(initialProgress);
 
   useEffect(() => {
     animatedProgress.value = withTiming(progress, {
@@ -106,9 +110,14 @@ export function ProgressRing({
             <View style={styles.heroScrim} />
           </>
         ) : (
-          <View style={styles.iconSilhouetteWrap}>
-            <Ionicons name={iconName} size={innerDiameter * 0.9} color="rgba(19,226,150,0.07)" />
-          </View>
+          <LinearGradient
+            colors={[colors.backgroundElevated, 'rgba(19,226,150,0.20)']}
+            start={{ x: 0.15, y: 0.05 }}
+            end={{ x: 0.9, y: 1 }}
+            style={styles.iconSilhouetteWrap}
+          >
+            <Ionicons name={iconName} size={innerDiameter * 0.5} color="rgba(107,255,206,0.32)" />
+          </LinearGradient>
         )}
       </View>
 

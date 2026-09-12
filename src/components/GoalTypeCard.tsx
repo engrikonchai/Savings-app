@@ -18,6 +18,11 @@ export function GoalTypeCard({ meta, selected, onPress }: GoalTypeCardProps) {
       haptic="selection"
       style={[styles.card, selected && styles.cardSelected]}
     >
+      {selected && (
+        <View style={styles.checkBadge}>
+          <Ionicons name="checkmark" size={12} color={colors.inkPrimary} />
+        </View>
+      )}
       <View style={[styles.iconWrap, selected && styles.iconWrapSelected]}>
         <Ionicons
           name={meta.icon}
@@ -45,6 +50,23 @@ const styles = StyleSheet.create({
   cardSelected: {
     backgroundColor: colors.accentSoft,
     borderColor: colors.accent,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  checkBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.accentLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
   },
   iconWrap: {
     width: 56,

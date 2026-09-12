@@ -1,17 +1,15 @@
-import React, { useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSequence,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
-import { ScreenContainer, Button } from '../src/components';
+import * as Haptics from 'expo-haptics';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { ScreenContainer, Button, ProgressRing, ShareCard } from '../src/components';
 import { useGoalContext } from '../src/store/GoalContext';
 import { formatCurrency } from '../src/utils/currency';
+import { calculateGoalProgress } from '../src/utils/goalMath';
+import { getGoalTypeMeta } from '../src/constants/goalTypes';
+import { shareViewAsImage } from '../src/utils/share';
 import { TransactionKind } from '../src/types/models';
 import { colors, spacing, typography } from '../src/theme';
 
@@ -23,39 +21,27 @@ export default function ResultScreen() {
     note?: string;
   }>();
   const router = useRouter();
-  const { settings } = useGoalContext();
+  const { goal, transactions, settings } = useGoalContext();
+  const shareCardRef = useRef<View>(null);
+  const [sharing, setSharing] = useState(false);
+
+  if (!goal) {
+    return <Redirect href="/onboarding" />;
+  }
 
   const isSaved = params.kind === 'saved';
   const amount = Number(params.amount) || 0;
   const dayShift = Number(params.dayShift) || 0;
   const absShift = Math.abs(dayShift);
 
-  const scale = useSharedValue(0.6);
-  const opacity = useSharedValue(0);
-  const glow = useSharedValue(0.4);
-
-  useEffect(() => {
-    opacity.value = withTiming(1, { duration: 300 });
-    scale.value = withSequence(
-      withSpring(1.08, { damping: 6, stiffness: 140 }),
-      withSpring(1, { damping: 8, stiffness: 160 }),
-    );
-    glow.value = withSequence(
-      withTiming(1, { duration: 350 }),
-      withTiming(0.6, { duration: 500 }),
-    );
-  }, [opacity, scale, glow]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ scale: scale.value }],
-  }));
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glow.value * (isSaved ? 0.5 : 0.32),
-    transform: [{ scale: 1 + glow.value * 0.18 }],
-  }));
+  const meta = getGoalTypeMeta(goal.type);
+  // transactions[0] is the one just added (GoalContext unshifts new entries),
+  // so dropping it gives the "before" state to animate the ring from.
+  const beforeProgress = calculateGoalProgress(goal, transactions.slice(1));
+  const afterProgress = calculateGoalProgress(goal, transactions);
 
   const accent = isSaved ? colors.accent : colors.spend;
+  const amountLabel = formatCurrency(amount, settings.currency);
   const iconName: keyof typeof Ionicons.glyphMap = isSaved
     ? absShift > 0
       ? 'rocket'
@@ -66,35 +52,86 @@ export default function ResultScreen() {
 
   const headline = isSaved
     ? absShift > 0
-      ? `You're ${absShift} day${absShift === 1 ? '' : 's'} closer!`
-      : "Nice, that's saved!"
+      ? `${amountLabel} added — you're ${absShift} day${absShift === 1 ? '' : 's'} closer.`
+      : `${amountLabel} added — nice, that's saved!`
     : absShift > 0
-      ? `${absShift} day${absShift === 1 ? '' : 's'} farther away`
-      : 'Logged that spend';
+      ? `${amountLabel} spent — ${absShift} day${absShift === 1 ? '' : 's'} farther away.`
+      : `${amountLabel} logged.`;
 
   const body = isSaved
-    ? `Adding ${formatCurrency(amount, settings.currency)} moves your target date closer. Keep the momentum going.`
-    : `Spending ${formatCurrency(amount, settings.currency)} pushes your goal back a little. You've got this — bounce back next deposit.`;
+    ? 'Keep the momentum going — every deposit adds up.'
+    : "You've got this — bounce back with your next deposit.";
+
+  const shareTagline = afterProgress.isComplete
+    ? `Goal reached! ${meta.label.toLowerCase()} unlocked 🎉`
+    : `${afterProgress.percent}% of the way there — let's go!`;
+
+  const handleShare = async () => {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      const result = await shareViewAsImage(shareCardRef, {
+        dialogTitle: `${goal.name} progress`,
+        fileName: 'cargoal-progress.png',
+      });
+      if (result.shared) {
+        await Haptics.selectionAsync().catch(() => {});
+      }
+    } catch {
+      // Sharing failing shouldn't block the user from finishing the flow.
+    } finally {
+      setSharing(false);
+    }
+  };
 
   return (
     <ScreenContainer contentStyle={styles.content}>
-      <View style={styles.iconStack}>
-        <Animated.View
-          pointerEvents="none"
-          style={[styles.glow, glowStyle, { backgroundColor: accent }]}
-        />
-        <Animated.View style={[styles.iconWrap, animatedStyle, { backgroundColor: `${accent}22`, borderColor: `${accent}55` }]}>
-          <Ionicons name={iconName} size={52} color={accent} />
-        </Animated.View>
-      </View>
+      <Animated.View entering={FadeIn.duration(400)} style={styles.ringWrap}>
+        <ProgressRing
+          progress={afterProgress.progressRatio}
+          initialProgress={beforeProgress.progressRatio}
+          size={188}
+          strokeWidth={13}
+          imageUri={goal.imageUri}
+          iconName={meta.silhouetteIcon}
+        >
+          <Text style={styles.percent}>{afterProgress.percent}%</Text>
+          <Text style={styles.percentLabel}>funded</Text>
+        </ProgressRing>
+      </Animated.View>
 
-      <Animated.Text style={[styles.headline, animatedStyle, { color: accent }]}>
-        {headline}
-      </Animated.Text>
-      <Animated.Text style={[styles.body, animatedStyle]}>{body}</Animated.Text>
+      <View style={styles.headlineRow}>
+        <Ionicons name={iconName} size={20} color={accent} />
+        <Text style={[styles.headline, { color: accent }]}>{headline}</Text>
+      </View>
+      <Text style={styles.body}>{body}</Text>
 
       <View style={styles.footer}>
         <Button label="Done" onPress={() => router.replace('/(tabs)')} />
+        <Button
+          label={sharing ? 'Preparing…' : 'Share progress'}
+          variant="ghost"
+          onPress={handleShare}
+          loading={sharing}
+          style={styles.shareButton}
+        />
+      </View>
+
+      {/* Off-screen, always-mounted share card captured to an image on demand. */}
+      <View style={styles.captureHost} pointerEvents="none">
+        <View style={styles.captureAnchor}>
+          <ShareCard
+            ref={shareCardRef}
+            goalName={goal.name}
+            meta={meta}
+            imageUri={goal.imageUri}
+            savedAmount={afterProgress.savedAmount}
+            targetAmount={goal.targetAmount}
+            percent={afterProgress.percent}
+            currency={settings.currency}
+            tagline={shareTagline}
+          />
+        </View>
       </View>
     </ScreenContainer>
   );
@@ -107,29 +144,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingBottom: spacing.xl,
   },
-  iconStack: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  ringWrap: {
     marginBottom: spacing.xl,
   },
-  glow: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
+  percent: {
+    ...typography.mega,
+    fontSize: 38,
+    lineHeight: 42,
+    color: colors.textPrimary,
   },
-  iconWrap: {
-    width: 124,
-    height: 124,
-    borderRadius: 62,
+  percentLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+  },
+  headlineRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
   },
   headline: {
-    ...typography.h1,
+    ...typography.h2,
     textAlign: 'center',
-    marginBottom: spacing.sm,
+    flexShrink: 1,
   },
   body: {
     ...typography.bodyLarge,
@@ -143,5 +182,17 @@ const styles = StyleSheet.create({
     bottom: spacing.xl,
     left: spacing.lg,
     right: spacing.lg,
+    gap: spacing.sm,
+  },
+  shareButton: {
+    marginTop: spacing.xs,
+  },
+  captureHost: {
+    height: 0,
+    width: 0,
+    overflow: 'hidden',
+  },
+  captureAnchor: {
+    position: 'absolute',
   },
 });

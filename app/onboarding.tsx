@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { ScreenContainer, Button, GoalTypeCard } from '../src/components';
+import { ScreenContainer, Button, GoalTypeCard, LogoMark } from '../src/components';
 import { GOAL_TYPES } from '../src/constants/goalTypes';
 import { GoalType } from '../src/types/models';
 import { colors, spacing, typography } from '../src/theme';
@@ -19,6 +19,9 @@ export default function OnboardingScreen() {
   return (
     <ScreenContainer contentStyle={styles.content}>
       <View style={styles.header}>
+        <Animated.View entering={FadeInUp.duration(450)} style={styles.logoWrap}>
+          <LogoMark size={40} />
+        </Animated.View>
         <Animated.Text entering={FadeInUp.duration(500)} style={styles.kicker}>
           WELCOME TO CARGOAL
         </Animated.Text>
@@ -56,6 +59,9 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: spacing.xl,
+  },
+  logoWrap: {
+    marginBottom: spacing.md,
   },
   kicker: {
     ...typography.micro,

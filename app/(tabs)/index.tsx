@@ -13,7 +13,7 @@ import {
   FloatingActionButton,
 } from '../../src/components';
 import { useGoalContext } from '../../src/store/GoalContext';
-import { calculateGoalProgress } from '../../src/utils/goalMath';
+import { calculateGoalProgress, calculateTargetStatus } from '../../src/utils/goalMath';
 import { formatCurrency } from '../../src/utils/currency';
 import { formatDateShort } from '../../src/utils/date';
 import { getGoalTypeMeta } from '../../src/constants/goalTypes';
@@ -28,8 +28,10 @@ export default function HomeScreen() {
   }
 
   const progress = calculateGoalProgress(goal, transactions);
+  const targetStatus = calculateTargetStatus(goal, progress);
   const meta = getGoalTypeMeta(goal.type);
   const currency = settings.currency;
+  const isZeroState = progress.percent === 0 && !progress.isComplete;
 
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
@@ -69,6 +71,19 @@ export default function HomeScreen() {
           {formatCurrency(progress.savedAmount, currency)}
           <Text style={styles.amountLineMuted}> / {formatCurrency(goal.targetAmount, currency)}</Text>
         </Text>
+
+        {!progress.isComplete && (
+          <View style={styles.statusRow}>
+            <Ionicons
+              name={isZeroState ? 'sparkles' : 'trending-up'}
+              size={14}
+              color={colors.accentLight}
+            />
+            <Text style={styles.statusText}>
+              {isZeroState ? meta.zeroStateCopy(formatCurrency(10, currency)) : targetStatus.label}
+            </Text>
+          </View>
+        )}
 
         {progress.isComplete ? (
           <Card variant="cream" style={styles.completeCard}>
@@ -180,6 +195,18 @@ const styles = StyleSheet.create({
   },
   amountLineMuted: {
     color: colors.textTertiary,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    marginBottom: spacing.md,
+    maxWidth: '100%',
+  },
+  statusText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    flexShrink: 1,
   },
   statsRow: {
     flexDirection: 'row',

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer, Card, Button, TextField, SegmentedControl } from '../src/components';
 import { PressableScale } from '../src/components/PressableScale';
 import { useGoalContext } from '../src/store/GoalContext';
@@ -96,6 +97,7 @@ export default function AddTransactionScreen() {
             haptic="selection"
             onPress={() => setAmountText(String(quick))}
           >
+            <Ionicons name="add" size={14} color={colors.textPrimary} />
             <Text style={styles.quickChipText}>€{quick}</Text>
           </PressableScale>
         ))}
@@ -146,10 +148,15 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   quickChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
     borderRadius: 999,
-    backgroundColor: colors.backgroundElevated,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
   },
   quickChipText: {
     ...typography.caption,

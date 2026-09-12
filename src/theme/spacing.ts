@@ -16,3 +16,6 @@ export const radius = {
   xl: 32,
   pill: 999,
 } as const;
+
+/** Height of the bottom tab bar, shared so screens can float content above it. */
+export const TAB_BAR_HEIGHT = 88;

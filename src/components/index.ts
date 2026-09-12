@@ -7,4 +7,7 @@ export * from './ProgressRing';
 export * from './ProgressBar';
 export * from './GoalTypeCard';
 export * from './StatTile';
+export * from './MotivationCard';
+export * from './FloatingActionButton';
+export * from './PhoneShell';
 export * from './PressableScale';

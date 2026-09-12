@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer, Card, Button, TextField } from '../src/components';
 import { PressableScale } from '../src/components/PressableScale';
 import { GoalDateField } from '../src/components/GoalDateField';
@@ -77,7 +78,9 @@ export default function CreateGoalScreen() {
   return (
     <ScreenContainer scroll contentStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.emoji}>{meta.emoji}</Text>
+        <View style={styles.iconBadge}>
+          <Ionicons name={meta.icon} size={28} color={colors.accentLight} />
+        </View>
         <Text style={styles.title}>Set up your goal</Text>
         <Text style={styles.subtitle}>Give it a name, a target, and a deadline.</Text>
       </View>
@@ -119,7 +122,8 @@ export default function CreateGoalScreen() {
             <Image source={{ uri: imageUri }} style={styles.imagePreview} contentFit="cover" />
           ) : (
             <View style={styles.imagePlaceholder}>
-              <Text style={styles.imagePlaceholderText}>+ Add a photo</Text>
+              <Ionicons name="camera-outline" size={22} color={colors.inkSecondary} />
+              <Text style={styles.imagePlaceholderText}>Add a photo</Text>
             </View>
           )}
         </PressableScale>
@@ -142,8 +146,15 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: spacing.lg,
   },
-  emoji: {
-    fontSize: 40,
+  iconBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 20,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.sm,
   },
   title: {
@@ -178,6 +189,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.xxs,
   },
   imagePlaceholderText: {
     ...typography.body,

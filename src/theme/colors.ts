@@ -1,43 +1,50 @@
 /**
- * CarGoal color system.
- * Dark graphite shell with warm cream surfaces and a forest-green accent.
+ * CarGoal color system — v2 "electric emerald" redesign.
+ * Deep graphite shell, warm ivory surfaces used sparingly, and an
+ * electric emerald accent reserved for progress and success states.
  */
 export const colors = {
-  // Dark graphite backgrounds
-  background: '#14161A',
-  backgroundElevated: '#1C1F24',
-  backgroundSunken: '#0E1013',
+  // Graphite backgrounds
+  background: '#101114',
+  backgroundElevated: '#1A1B1F',
+  backgroundSunken: '#0A0B0D',
 
-  // Warm cream surfaces (cards, inputs)
-  cream: '#F7F1E6',
-  creamMuted: '#EDE4D3',
-  creamBorder: '#E1D5BD',
+  // Warm ivory surfaces (cards, inputs) — used sparingly
+  cream: '#F7F3EA',
+  creamMuted: '#EEE7D6',
+  creamBorder: '#E2D8C0',
 
-  // Forest green accent
-  accent: '#1F6F4A',
-  accentDark: '#154D33',
-  accentLight: '#35A46B',
-  accentSoft: '#173226',
+  // Electric emerald accent
+  accent: '#13E296',
+  accentDark: '#0A9C69',
+  accentLight: '#6BFFCE',
+  accentSoft: 'rgba(19, 226, 150, 0.14)',
+  accentGlow: 'rgba(19, 226, 150, 0.45)',
 
   // Status
-  spend: '#D9634F',
-  spendSoft: '#3A2320',
-  save: '#35A46B',
-  saveSoft: '#123726',
+  spend: '#FF6B57',
+  spendSoft: 'rgba(255, 107, 87, 0.14)',
+  save: '#13E296',
+  saveSoft: 'rgba(19, 226, 150, 0.14)',
 
   // Text on dark background
-  textPrimary: '#F7F1E6',
-  textSecondary: '#A7ADB4',
-  textTertiary: '#6E747C',
+  textPrimary: '#F7F3EA',
+  textSecondary: '#9BA0A8',
+  textTertiary: '#63666E',
 
-  // Text on cream surfaces
-  inkPrimary: '#1C1E1B',
-  inkSecondary: '#5B5A50',
-  inkTertiary: '#8A8778',
+  // Text on ivory surfaces
+  inkPrimary: '#181A16',
+  inkSecondary: '#5C594C',
+  inkTertiary: '#8B8776',
+
+  // Subtle glass effects on dark surfaces
+  glass: 'rgba(255, 255, 255, 0.05)',
+  glassBorder: 'rgba(255, 255, 255, 0.10)',
+  glassHighlight: 'rgba(255, 255, 255, 0.14)',
 
   white: '#FFFFFF',
   black: '#000000',
-  overlay: 'rgba(10, 12, 14, 0.6)',
+  overlay: 'rgba(6, 7, 8, 0.65)',
 } as const;
 
 export type ColorToken = keyof typeof colors;

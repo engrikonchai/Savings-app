@@ -1,9 +1,17 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ScreenContainer, Card, Button, ProgressRing, StatTile } from '../../src/components';
+import {
+  ScreenContainer,
+  Card,
+  ProgressRing,
+  StatTile,
+  MotivationCard,
+  FloatingActionButton,
+} from '../../src/components';
 import { useGoalContext } from '../../src/store/GoalContext';
 import { calculateGoalProgress } from '../../src/utils/goalMath';
 import { formatCurrency } from '../../src/utils/currency';
@@ -24,73 +32,82 @@ export default function HomeScreen() {
   const currency = settings.currency;
 
   return (
-    <ScreenContainer scroll contentStyle={styles.content}>
-      <View style={styles.headerRow}>
-        <View style={styles.headerText}>
-          <Text style={styles.eyebrow}>{meta.label.toUpperCase()}</Text>
-          <Text style={styles.goalName}>{goal.name}</Text>
-        </View>
-        {goal.imageUri ? (
-          <Image source={{ uri: goal.imageUri }} style={styles.thumb} contentFit="cover" />
-        ) : (
-          <View style={styles.thumbPlaceholder}>
-            <Text style={{ fontSize: 26 }}>{meta.emoji}</Text>
+    <ScreenContainer edges={['top', 'left', 'right']}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.headerRow}>
+          <View style={styles.headerText}>
+            <Text style={styles.eyebrow}>{meta.label.toUpperCase()}</Text>
+            <Text style={styles.goalName}>{goal.name}</Text>
           </View>
-        )}
-      </View>
-
-      <Animated.View entering={FadeInDown.duration(600)} style={styles.ringWrap}>
-        <ProgressRing progress={progress.progressRatio} size={230} strokeWidth={18}>
-          <Text style={styles.percent}>{progress.percent}%</Text>
-          <Text style={styles.ringLabel}>funded</Text>
-        </ProgressRing>
-      </Animated.View>
-
-      <Text style={styles.amountLine}>
-        {formatCurrency(progress.savedAmount, currency)}
-        <Text style={styles.amountLineMuted}> / {formatCurrency(goal.targetAmount, currency)}</Text>
-      </Text>
-
-      {progress.isComplete ? (
-        <Card variant="cream" style={styles.completeCard}>
-          <Text style={styles.completeTitle}>🎉 Goal reached!</Text>
-          <Text style={styles.completeBody}>
-            You hit your target for {goal.name}. Time to make it real.
-          </Text>
-        </Card>
-      ) : (
-        <Card style={styles.statsCard}>
-          <View style={styles.statsRow}>
-            <StatTile
-              label="Remaining"
-              value={formatCurrency(progress.remainingAmount, currency)}
-              accentColor={colors.accent}
-            />
-            <StatTile
-              label={progress.isPastDue ? 'Deadline' : 'Days left'}
-              value={progress.isPastDue ? 'Passed' : `${progress.daysLeft}`}
-              accentColor={progress.isPastDue ? colors.spend : colors.inkPrimary}
-            />
-          </View>
-          <View style={styles.paceRow}>
-            <Text style={styles.paceLabel}>To hit your goal by {formatDateShort(goal.targetDate)}, save</Text>
-            <View style={styles.paceValues}>
-              <View style={styles.paceItem}>
-                <Text style={styles.paceAmount}>{formatCurrency(progress.dailyNeeded, currency)}</Text>
-                <Text style={styles.paceUnit}>per day</Text>
-              </View>
-              <View style={styles.paceDivider} />
-              <View style={styles.paceItem}>
-                <Text style={styles.paceAmount}>{formatCurrency(progress.weeklyNeeded, currency)}</Text>
-                <Text style={styles.paceUnit}>per week</Text>
-              </View>
+          {goal.imageUri ? (
+            <Image source={{ uri: goal.imageUri }} style={styles.thumb} contentFit="cover" />
+          ) : (
+            <View style={styles.thumbPlaceholder}>
+              <Ionicons name={meta.icon} size={24} color={colors.textPrimary} />
             </View>
-          </View>
-        </Card>
-      )}
+          )}
+        </View>
 
-      <View style={styles.footer}>
-        <Button label="Add transaction" onPress={() => router.push('/add-transaction')} />
+        <Animated.View entering={FadeInDown.duration(600)} style={styles.ringWrap}>
+          <ProgressRing
+            progress={progress.progressRatio}
+            size={224}
+            strokeWidth={14}
+            imageUri={goal.imageUri}
+            iconName={meta.silhouetteIcon}
+          >
+            <Text style={styles.percent}>{progress.percent}%</Text>
+            <Text style={styles.ringLabel}>funded</Text>
+          </ProgressRing>
+        </Animated.View>
+
+        <Text style={styles.amountLine}>
+          {formatCurrency(progress.savedAmount, currency)}
+          <Text style={styles.amountLineMuted}> / {formatCurrency(goal.targetAmount, currency)}</Text>
+        </Text>
+
+        {progress.isComplete ? (
+          <Card variant="cream" style={styles.completeCard}>
+            <Ionicons name="trophy" size={28} color={colors.accentDark} style={styles.completeIcon} />
+            <Text style={styles.completeTitle}>Goal reached!</Text>
+            <Text style={styles.completeBody}>
+              You hit your target for {goal.name}. Time to make it real.
+            </Text>
+          </Card>
+        ) : (
+          <>
+            <View style={styles.statsRow}>
+              <StatTile
+                icon="wallet-outline"
+                label="Remaining"
+                value={formatCurrency(progress.remainingAmount, currency)}
+                accentColor={colors.accentDark}
+              />
+              <StatTile
+                icon="calendar-outline"
+                label={progress.isPastDue ? 'Deadline' : 'Days left'}
+                value={progress.isPastDue ? 'Passed' : `${progress.daysLeft}`}
+                accentColor={progress.isPastDue ? colors.spend : colors.inkPrimary}
+              />
+            </View>
+
+            <MotivationCard
+              label={`To hit your goal by ${formatDateShort(goal.targetDate)}, save`}
+              dailyValue={formatCurrency(progress.dailyNeeded, currency)}
+              weeklyValue={formatCurrency(progress.weeklyNeeded, currency)}
+            />
+          </>
+        )}
+
+        <View style={styles.fabSpacer} />
+      </ScrollView>
+
+      <View style={styles.fabWrap} pointerEvents="box-none">
+        <FloatingActionButton label="Add money" onPress={() => router.push('/add-transaction')} />
       </View>
     </ScreenContainer>
   );
@@ -98,16 +115,19 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
+  },
+  scroll: {
+    flex: 1,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'stretch',
     justifyContent: 'space-between',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
   },
   headerText: {
     flexShrink: 1,
@@ -122,81 +142,57 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   thumb: {
-    width: 56,
-    height: 56,
+    width: 52,
+    height: 52,
     borderRadius: 16,
   },
   thumbPlaceholder: {
-    width: 56,
-    height: 56,
+    width: 52,
+    height: 52,
     borderRadius: 16,
     backgroundColor: colors.backgroundElevated,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
   },
   ringWrap: {
-    marginVertical: spacing.md,
+    marginVertical: spacing.xs,
   },
   percent: {
-    ...typography.display,
+    ...typography.mega,
     color: colors.textPrimary,
-    fontSize: 42,
+    fontSize: 46,
+    lineHeight: 50,
   },
   ringLabel: {
     ...typography.caption,
     color: colors.textSecondary,
     textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   amountLine: {
-    ...typography.h2,
+    ...typography.mega,
+    fontSize: 38,
+    lineHeight: 42,
     color: colors.textPrimary,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   amountLineMuted: {
     color: colors.textTertiary,
   },
-  statsCard: {
-    alignSelf: 'stretch',
-  },
   statsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  paceRow: {
-    borderTopWidth: 1,
-    borderTopColor: colors.creamBorder,
-    paddingTop: spacing.md,
-  },
-  paceLabel: {
-    ...typography.caption,
-    color: colors.inkSecondary,
+    alignSelf: 'stretch',
     marginBottom: spacing.sm,
-  },
-  paceValues: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  paceItem: {
-    flex: 1,
-  },
-  paceAmount: {
-    ...typography.h2,
-    color: colors.accentDark,
-  },
-  paceUnit: {
-    ...typography.caption,
-    color: colors.inkTertiary,
-  },
-  paceDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: colors.creamBorder,
-    marginHorizontal: spacing.md,
   },
   completeCard: {
     alignSelf: 'stretch',
     alignItems: 'center',
+  },
+  completeIcon: {
+    marginBottom: spacing.xs,
   },
   completeTitle: {
     ...typography.h2,
@@ -208,8 +204,14 @@ const styles = StyleSheet.create({
     color: colors.inkSecondary,
     textAlign: 'center',
   },
-  footer: {
-    alignSelf: 'stretch',
-    marginTop: spacing.xl,
+  fabSpacer: {
+    height: 140,
+  },
+  fabWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: spacing.lg,
+    alignItems: 'center',
   },
 });

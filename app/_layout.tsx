@@ -13,6 +13,7 @@ import {
   Manrope_800ExtraBold,
 } from '@expo-google-fonts/manrope';
 import { GoalProvider, useGoalContext } from '../src/store/GoalContext';
+import { PhoneShell } from '../src/components/PhoneShell';
 import { colors } from '../src/theme';
 import { View } from 'react-native';
 
@@ -70,7 +71,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <GoalProvider>
-          <RootNavigator />
+          <PhoneShell>
+            <RootNavigator />
+          </PhoneShell>
           <StatusBar style="light" />
         </GoalProvider>
       </SafeAreaProvider>

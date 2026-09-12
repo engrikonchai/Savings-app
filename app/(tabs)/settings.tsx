@@ -1,6 +1,7 @@
 import React from 'react';
 import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer, Card, Button, SegmentedControl } from '../../src/components';
 import { useGoalContext } from '../../src/store/GoalContext';
 import { CurrencyCode } from '../../src/types/models';
@@ -38,7 +39,7 @@ export default function SettingsScreen() {
     <ScreenContainer scroll contentStyle={styles.content}>
       <Text style={styles.title}>Settings</Text>
 
-      <Text style={styles.sectionLabel}>Currency</Text>
+      <SectionLabel icon="cash-outline" text="Currency" />
       <Card style={styles.card}>
         <SegmentedControl
           options={CURRENCY_OPTIONS}
@@ -47,7 +48,7 @@ export default function SettingsScreen() {
         />
       </Card>
 
-      <Text style={styles.sectionLabel}>Notifications</Text>
+      <SectionLabel icon="notifications-outline" text="Notifications" />
       <Card style={[styles.card, styles.row]}>
         <View style={styles.rowText}>
           <Text style={styles.rowTitle}>Daily reminders</Text>
@@ -61,7 +62,7 @@ export default function SettingsScreen() {
         />
       </Card>
 
-      <Text style={styles.sectionLabel}>Data</Text>
+      <SectionLabel icon="shield-checkmark-outline" text="Data" />
       <Card style={styles.card}>
         <Text style={styles.rowSubtitle}>
           CarGoal stores everything only on this device. Nothing is uploaded anywhere.
@@ -69,6 +70,15 @@ export default function SettingsScreen() {
       </Card>
       <Button label="Reset all data" variant="danger" onPress={handleReset} style={styles.resetButton} />
     </ScreenContainer>
+  );
+}
+
+function SectionLabel({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
+  return (
+    <View style={styles.sectionLabelRow}>
+      <Ionicons name={icon} size={14} color={colors.textTertiary} />
+      <Text style={styles.sectionLabel}>{text}</Text>
+    </View>
   );
 }
 
@@ -82,12 +92,17 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.lg,
   },
+  sectionLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+    marginTop: spacing.md,
+  },
   sectionLabel: {
     ...typography.micro,
     color: colors.textTertiary,
     textTransform: 'uppercase',
-    marginBottom: spacing.sm,
-    marginTop: spacing.md,
   },
   card: {
     marginBottom: spacing.xs,

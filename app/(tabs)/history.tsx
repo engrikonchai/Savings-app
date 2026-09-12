@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Redirect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../src/components';
 import { useGoalContext } from '../../src/store/GoalContext';
 import { Transaction } from '../../src/types/models';
@@ -38,7 +39,9 @@ export default function HistoryScreen() {
       <Text style={styles.title}>History</Text>
       {transactions.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>🌱</Text>
+          <View style={styles.emptyIconWrap}>
+            <Ionicons name="receipt-outline" size={30} color={colors.textSecondary} />
+          </View>
           <Text style={styles.emptyTitle}>Nothing here yet</Text>
           <Text style={styles.emptyBody}>
             Every euro you save or spend toward {goal.name} will show up here.
@@ -74,7 +77,11 @@ function TransactionRow({
   return (
     <View style={styles.row}>
       <View style={[styles.iconWrap, { backgroundColor: isSaved ? colors.saveSoft : colors.spendSoft }]}>
-        <Text style={styles.icon}>{isSaved ? '↑' : '↓'}</Text>
+        <Ionicons
+          name={isSaved ? 'arrow-up-circle' : 'arrow-down-circle'}
+          size={22}
+          color={isSaved ? colors.save : colors.spend}
+        />
       </View>
       <View style={styles.rowBody}>
         <Text style={styles.rowNote} numberOfLines={1}>
@@ -116,6 +123,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
   },
   iconWrap: {
     width: 40,
@@ -124,11 +133,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.sm,
-  },
-  icon: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
   rowBody: {
     flex: 1,
@@ -152,9 +156,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingBottom: spacing.xxxl,
   },
-  emptyEmoji: {
-    fontSize: 40,
-    marginBottom: spacing.sm,
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.backgroundElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
   },
   emptyTitle: {
     ...typography.h2,

@@ -40,7 +40,7 @@ export function Button({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.cream : colors.accent} />
+        <ActivityIndicator color={variant === 'primary' ? colors.inkPrimary : colors.accent} />
       ) : (
         <Text style={[styles.label, VARIANT_LABEL_STYLES[variant]]}>{label}</Text>
       )}
@@ -69,14 +69,21 @@ const styles = StyleSheet.create({
 });
 
 const VARIANT_STYLES: Record<Variant, ViewStyle> = {
-  primary: { backgroundColor: colors.accent },
+  primary: {
+    backgroundColor: colors.accent,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
+  },
   secondary: { backgroundColor: colors.cream },
-  ghost: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: 'rgba(247,241,230,0.25)' },
+  ghost: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.glassBorder },
   danger: { backgroundColor: colors.spendSoft, borderWidth: 1.5, borderColor: colors.spend },
 };
 
 const VARIANT_LABEL_STYLES: Record<Variant, { color: string }> = {
-  primary: { color: colors.cream },
+  primary: { color: colors.inkPrimary },
   secondary: { color: colors.inkPrimary },
   ghost: { color: colors.textPrimary },
   danger: { color: colors.spend },

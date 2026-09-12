@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -31,6 +32,7 @@ export default function ResultScreen() {
 
   const scale = useSharedValue(0.6);
   const opacity = useSharedValue(0);
+  const glow = useSharedValue(0.4);
 
   useEffect(() => {
     opacity.value = withTiming(1, { duration: 300 });
@@ -38,19 +40,33 @@ export default function ResultScreen() {
       withSpring(1.08, { damping: 6, stiffness: 140 }),
       withSpring(1, { damping: 8, stiffness: 160 }),
     );
-  }, [opacity, scale]);
+    glow.value = withSequence(
+      withTiming(1, { duration: 350 }),
+      withTiming(0.6, { duration: 500 }),
+    );
+  }, [opacity, scale, glow]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ scale: scale.value }],
   }));
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glow.value * (isSaved ? 0.5 : 0.32),
+    transform: [{ scale: 1 + glow.value * 0.18 }],
+  }));
 
-  const accent = isSaved ? colors.accentLight : colors.spend;
-  const emoji = isSaved ? (absShift > 0 ? '🚀' : '💪') : absShift > 0 ? '⏳' : '📉';
+  const accent = isSaved ? colors.accent : colors.spend;
+  const iconName: keyof typeof Ionicons.glyphMap = isSaved
+    ? absShift > 0
+      ? 'rocket'
+      : 'checkmark-circle'
+    : absShift > 0
+      ? 'hourglass'
+      : 'trending-down';
 
   const headline = isSaved
     ? absShift > 0
-      ? `${absShift} day${absShift === 1 ? '' : 's'} closer!`
+      ? `You're ${absShift} day${absShift === 1 ? '' : 's'} closer!`
       : "Nice, that's saved!"
     : absShift > 0
       ? `${absShift} day${absShift === 1 ? '' : 's'} farther away`
@@ -62,9 +78,15 @@ export default function ResultScreen() {
 
   return (
     <ScreenContainer contentStyle={styles.content}>
-      <Animated.View style={[styles.iconWrap, animatedStyle, { backgroundColor: `${accent}22` }]}>
-        <Text style={styles.emoji}>{emoji}</Text>
-      </Animated.View>
+      <View style={styles.iconStack}>
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.glow, glowStyle, { backgroundColor: accent }]}
+        />
+        <Animated.View style={[styles.iconWrap, animatedStyle, { backgroundColor: `${accent}22`, borderColor: `${accent}55` }]}>
+          <Ionicons name={iconName} size={52} color={accent} />
+        </Animated.View>
+      </View>
 
       <Animated.Text style={[styles.headline, animatedStyle, { color: accent }]}>
         {headline}
@@ -85,16 +107,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingBottom: spacing.xl,
   },
-  iconWrap: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+  iconStack: {
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xl,
   },
-  emoji: {
-    fontSize: 56,
+  glow: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+  },
+  iconWrap: {
+    width: 124,
+    height: 124,
+    borderRadius: 62,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
   },
   headline: {
     ...typography.h1,

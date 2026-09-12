@@ -1,8 +1,11 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, {
   useAnimatedProps,
+  useAnimatedStyle,
   useSharedValue,
   withTiming,
   Easing,
@@ -15,13 +18,19 @@ interface ProgressRingProps {
   progress: number; // 0..1
   size?: number;
   strokeWidth?: number;
+  /** Optional goal photo shown behind the ring as the hero visual. */
+  imageUri?: string;
+  /** Line-icon silhouette shown when no photo is set. */
+  iconName?: keyof typeof Ionicons.glyphMap;
   children?: React.ReactNode;
 }
 
 export function ProgressRing({
   progress,
-  size = 220,
-  strokeWidth = 16,
+  size = 260,
+  strokeWidth = 18,
+  imageUri,
+  iconName = 'sparkles',
   children,
 }: ProgressRingProps) {
   const radius = (size - strokeWidth) / 2;
@@ -39,14 +48,76 @@ export function ProgressRing({
     strokeDashoffset: circumference * (1 - animatedProgress.value),
   }));
 
+  // The glow grows from nothing at 0% to a soft emerald aura at 100%.
+  const outerGlowStyle = useAnimatedStyle(() => ({
+    opacity: animatedProgress.value * 0.6,
+    transform: [{ scale: 0.94 + animatedProgress.value * 0.12 }],
+  }));
+  const innerGlowStyle = useAnimatedStyle(() => ({
+    opacity: animatedProgress.value * 0.45,
+  }));
+
+  const innerDiameter = size - strokeWidth * 2.6;
+
   return (
     <View style={[styles.container, { width: size, height: size }]}>
+      {/* Ambient glow layers, grow with progress */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.glow,
+          outerGlowStyle,
+          {
+            width: size * 1.28,
+            height: size * 1.28,
+            borderRadius: (size * 1.28) / 2,
+            backgroundColor: colors.accentGlow,
+          },
+        ]}
+      />
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.glow,
+          innerGlowStyle,
+          {
+            width: size * 1.08,
+            height: size * 1.08,
+            borderRadius: (size * 1.08) / 2,
+            backgroundColor: colors.accent,
+          },
+        ]}
+      />
+
+      {/* Hero visual: goal photo or a line-icon silhouette */}
+      <View
+        style={[
+          styles.heroClip,
+          {
+            width: innerDiameter,
+            height: innerDiameter,
+            borderRadius: innerDiameter / 2,
+          },
+        ]}
+      >
+        {imageUri ? (
+          <>
+            <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+            <View style={styles.heroScrim} />
+          </>
+        ) : (
+          <View style={styles.iconSilhouetteWrap}>
+            <Ionicons name={iconName} size={innerDiameter * 0.9} color="rgba(19,226,150,0.07)" />
+          </View>
+        )}
+      </View>
+
       <Svg width={size} height={size}>
         <Circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={colors.backgroundElevated}
+          stroke={colors.glassBorder}
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -64,6 +135,7 @@ export function ProgressRing({
           origin={`${size / 2}, ${size / 2}`}
         />
       </Svg>
+
       <View style={styles.center}>{children}</View>
     </View>
   );
@@ -73,6 +145,23 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  glow: {
+    position: 'absolute',
+  },
+  heroClip: {
+    position: 'absolute',
+    overflow: 'hidden',
+    backgroundColor: colors.backgroundElevated,
+  },
+  iconSilhouetteWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroScrim: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(10,11,13,0.28)',
   },
   center: {
     position: 'absolute',

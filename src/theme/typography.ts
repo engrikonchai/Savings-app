@@ -25,6 +25,7 @@ const make = (
 });
 
 export const typography = {
+  mega: make(56, 'extraBold', { letterSpacing: -1.5, lineHeight: 60 }),
   display: make(44, 'extraBold', { letterSpacing: -1, lineHeight: 48 }),
   h1: make(30, 'extraBold', { letterSpacing: -0.5, lineHeight: 36 }),
   h2: make(24, 'bold', { letterSpacing: -0.3, lineHeight: 30 }),

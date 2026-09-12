@@ -1,9 +1,9 @@
 import React from 'react';
 import { StyleSheet, View, ViewProps } from 'react-native';
-import { colors, radius, spacing } from '../theme';
+import { colors, radius, shadows, spacing } from '../theme';
 
 interface CardProps extends ViewProps {
-  variant?: 'cream' | 'elevated';
+  variant?: 'cream' | 'elevated' | 'glass';
   padded?: boolean;
 }
 
@@ -12,7 +12,7 @@ export function Card({ variant = 'cream', padded = true, style, children, ...res
     <View
       style={[
         styles.base,
-        variant === 'cream' ? styles.cream : styles.elevated,
+        VARIANT_STYLES[variant],
         padded && styles.padded,
         style,
       ]}
@@ -27,20 +27,24 @@ const styles = StyleSheet.create({
   base: {
     borderRadius: radius.lg,
   },
-  cream: {
-    backgroundColor: colors.cream,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  elevated: {
-    backgroundColor: colors.backgroundElevated,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
   padded: {
     padding: spacing.lg,
   },
 });
+
+const VARIANT_STYLES = {
+  cream: {
+    backgroundColor: colors.cream,
+    ...shadows.card,
+  },
+  elevated: {
+    backgroundColor: colors.backgroundElevated,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  glass: {
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+} as const;

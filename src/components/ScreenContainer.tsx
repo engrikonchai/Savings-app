@@ -28,7 +28,7 @@ export function ScreenContainer({
           {children}
         </ScrollView>
       ) : (
-        <View style={[styles.content, contentStyle]}>{children}</View>
+        <View style={[styles.plainContent, contentStyle]}>{children}</View>
       )}
     </SafeAreaView>
   );
@@ -41,6 +41,16 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
+    paddingHorizontal: spacing.lg,
+  },
+  // Unlike `content` (used as a ScrollView's contentContainerStyle, where
+  // flexGrow lets short content stretch), this wraps a plain View that must
+  // be clamped to the parent's height — flexGrow alone has no flex-basis to
+  // clamp against, so it grows to fit children instead, breaking anything
+  // (a nested ScrollView, absolutely-positioned overlays) that relies on a
+  // bounded container.
+  plainContent: {
+    flex: 1,
     paddingHorizontal: spacing.lg,
   },
 });

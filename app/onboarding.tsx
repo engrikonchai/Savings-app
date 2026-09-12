@@ -55,10 +55,9 @@ const styles = StyleSheet.create({
   content: {
     paddingTop: spacing.xl,
     paddingBottom: spacing.lg,
-    justifyContent: 'space-between',
   },
   header: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.xxl,
   },
   logoWrap: {
     marginBottom: spacing.md,
@@ -83,6 +82,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   footer: {
-    marginTop: spacing.xl,
+    marginTop: 'auto',
+    paddingTop: spacing.xl,
   },
 });

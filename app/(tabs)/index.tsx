@@ -37,6 +37,18 @@ export default function HomeScreen() {
   const heroContent =
     goal.type === 'car' && !goal.imageUri ? <CarBuildVisual percent={progress.percent} /> : undefined;
 
+  let statusIcon: keyof typeof Ionicons.glyphMap = 'trending-up';
+  let statusColor: string = colors.accentLight;
+  if (isZeroState) {
+    statusIcon = 'sparkles';
+  } else if (progress.isPastDue) {
+    statusIcon = 'alert-circle-outline';
+    statusColor = colors.spend;
+  } else if (targetStatus.daysAheadBehind < 0) {
+    statusIcon = 'trending-down';
+    statusColor = colors.textSecondary;
+  }
+
   return (
     <ScreenContainer edges={['top', 'left', 'right']}>
       <ScrollView
@@ -47,7 +59,9 @@ export default function HomeScreen() {
         <View style={styles.headerRow}>
           <View style={styles.headerText}>
             <Text style={styles.eyebrow}>{meta.label.toUpperCase()}</Text>
-            <Text style={styles.goalName}>{goal.name}</Text>
+            <Text style={styles.goalName} numberOfLines={1}>
+              {goal.name}
+            </Text>
           </View>
           {goal.imageUri ? (
             <Image source={{ uri: goal.imageUri }} style={styles.thumb} contentFit="cover" />
@@ -61,8 +75,8 @@ export default function HomeScreen() {
         <Animated.View entering={FadeInDown.duration(600)} style={styles.ringWrap}>
           <ProgressRing
             progress={progress.progressRatio}
-            size={224}
-            strokeWidth={14}
+            size={192}
+            strokeWidth={13}
             imageUri={goal.imageUri}
             iconName={meta.silhouetteIcon}
             heroContent={heroContent}
@@ -72,18 +86,14 @@ export default function HomeScreen() {
           </ProgressRing>
         </Animated.View>
 
-        <Text style={styles.amountLine}>
+        <Text style={styles.amountLine} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
           {formatCurrency(progress.savedAmount, currency)}
           <Text style={styles.amountLineMuted}> / {formatCurrency(goal.targetAmount, currency)}</Text>
         </Text>
 
         {!progress.isComplete && (
           <View style={styles.statusRow}>
-            <Ionicons
-              name={isZeroState ? 'sparkles' : 'trending-up'}
-              size={14}
-              color={colors.accentLight}
-            />
+            <Ionicons name={statusIcon} size={14} color={statusColor} />
             <Text style={styles.statusText}>
               {isZeroState ? meta.zeroStateCopy(formatCurrency(10, currency)) : targetStatus.label}
             </Text>
@@ -115,18 +125,21 @@ export default function HomeScreen() {
               />
             </View>
 
-            <MotivationCard
-              label={`To hit your goal by ${formatDateShort(goal.targetDate)}, save`}
-              dailyValue={formatCurrency(progress.dailyNeeded, currency)}
-              weeklyValue={formatCurrency(progress.weeklyNeeded, currency)}
-            />
+            {!progress.isPastDue && (
+              <MotivationCard
+                label={`To hit your goal by ${formatDateShort(goal.targetDate)}, save`}
+                // Round up to at least the smallest visible unit so a tiny
+                // remaining pace never misleadingly displays as "€0".
+                dailyValue={formatCurrency(Math.max(progress.dailyNeeded, progress.remainingAmount > 0 ? 1 : 0), currency)}
+                weeklyValue={formatCurrency(Math.max(progress.weeklyNeeded, progress.remainingAmount > 0 ? 1 : 0), currency)}
+              />
+            )}
           </>
         )}
 
-        <View style={styles.fabSpacer} />
       </ScrollView>
 
-      <View style={styles.fabWrap} pointerEvents="box-none">
+      <View style={styles.fabWrap}>
         <View style={styles.fabRow}>
           <PressableScale
             style={styles.realityCheckButton}
@@ -145,7 +158,8 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
   },
@@ -157,7 +171,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'stretch',
     justifyContent: 'space-between',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   headerText: {
     flexShrink: 1,
@@ -187,13 +201,13 @@ const styles = StyleSheet.create({
     borderColor: colors.glassBorder,
   },
   ringWrap: {
-    marginVertical: spacing.xs,
+    marginVertical: spacing.xxs,
   },
   percent: {
     ...typography.mega,
     color: colors.textPrimary,
-    fontSize: 46,
-    lineHeight: 50,
+    fontSize: 38,
+    lineHeight: 42,
   },
   ringLabel: {
     ...typography.caption,
@@ -203,10 +217,10 @@ const styles = StyleSheet.create({
   },
   amountLine: {
     ...typography.mega,
-    fontSize: 38,
-    lineHeight: 42,
+    fontSize: 34,
+    lineHeight: 38,
     color: colors.textPrimary,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   amountLineMuted: {
     color: colors.textTertiary,
@@ -215,7 +229,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xxs,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     maxWidth: '100%',
   },
   statusText: {
@@ -227,7 +241,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     alignSelf: 'stretch',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   completeCard: {
     alignSelf: 'stretch',
@@ -246,15 +260,14 @@ const styles = StyleSheet.create({
     color: colors.inkSecondary,
     textAlign: 'center',
   },
-  fabSpacer: {
-    height: 150,
-  },
+  // A normal (non-absolute) row below the ScrollView, not an overlay on top
+  // of it — so it can never cover scrollable content, regardless of content
+  // length or container height (mobile vs. the shorter desktop phone shell).
   fabWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: spacing.lg,
     alignItems: 'center',
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.background,
   },
   fabRow: {
     flexDirection: 'row',
@@ -264,7 +277,9 @@ const styles = StyleSheet.create({
   realityCheckButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.xxs,
+    minHeight: 44,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: radius.pill,

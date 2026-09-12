@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -36,12 +37,14 @@ export function PressableScale({
   }));
 
   const handlePressIn = (e: GestureResponderEvent) => {
-    scale.value = withTiming(scaleTo, { duration: 90 });
+    scale.value = withTiming(scaleTo, { duration: 100 });
     onPressIn?.(e);
   };
 
   const handlePressOut = (e: GestureResponderEvent) => {
-    scale.value = withTiming(1, { duration: 140 });
+    // A gentle spring back (not a linear tween) so release feels alive
+    // rather than mechanical, while staying subtle — no visible overshoot.
+    scale.value = withSpring(1, { damping: 14, stiffness: 260, mass: 0.5 });
     onPressOut?.(e);
   };
 

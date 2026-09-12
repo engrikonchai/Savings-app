@@ -42,7 +42,9 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? colors.inkPrimary : colors.accent} />
       ) : (
-        <Text style={[styles.label, VARIANT_LABEL_STYLES[variant]]}>{label}</Text>
+        <Text style={[styles.label, VARIANT_LABEL_STYLES[variant]]} numberOfLines={1}>
+          {label}
+        </Text>
       )}
     </PressableScale>
   );

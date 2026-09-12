@@ -25,12 +25,16 @@ export function MotivationCard({ label, dailyValue, weeklyValue }: MotivationCar
 
       <View style={styles.row}>
         <View style={styles.item}>
-          <Text style={styles.amount}>{dailyValue}</Text>
+          <Text style={styles.amount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
+            {dailyValue}
+          </Text>
           <Text style={styles.unit}>per day</Text>
         </View>
         <View style={styles.divider} />
         <View style={styles.item}>
-          <Text style={styles.amount}>{weeklyValue}</Text>
+          <Text style={styles.amount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
+            {weeklyValue}
+          </Text>
           <Text style={styles.unit}>per week</Text>
         </View>
       </View>
@@ -42,7 +46,8 @@ const styles = StyleSheet.create({
   card: {
     alignSelf: 'stretch',
     borderRadius: radius.lg,
-    padding: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     backgroundColor: colors.accentSoft,
     borderWidth: 1,
     borderColor: 'rgba(19,226,150,0.28)',
@@ -55,7 +60,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     gap: spacing.xs,
   },
   badge: {

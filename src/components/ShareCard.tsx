@@ -37,6 +37,9 @@ export const ShareCard = forwardRef<View, ShareCardProps>(function ShareCard(
   const heroContent = meta.type === 'car' && !imageUri ? <CarBuildVisual percent={percent} /> : undefined;
   const hasDreamDays = typeof dreamDaysDelta === 'number' && Math.abs(dreamDaysDelta) >= 0.05;
   const dreamDaysGained = (dreamDaysDelta ?? 0) >= 0;
+  // Truncated in JS rather than via `numberOfLines` — react-native-web's line-clamp
+  // technique for that prop doesn't render in the html2canvas capture used to share this card.
+  const displayName = goalName.length > 22 ? `${goalName.slice(0, 21).trimEnd()}…` : goalName;
 
   return (
     <View ref={ref} collapsable={false} style={styles.card}>
@@ -56,7 +59,7 @@ export const ShareCard = forwardRef<View, ShareCardProps>(function ShareCard(
         </ProgressRing>
       </View>
 
-      <Text style={styles.goalName}>{goalName}</Text>
+      <Text style={styles.goalName}>{displayName}</Text>
       <Text style={styles.amountLine}>
         {formatCurrency(savedAmount, currency)}
         <Text style={styles.amountLineMuted}> / {formatCurrency(targetAmount, currency)}</Text>

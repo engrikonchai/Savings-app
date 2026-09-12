@@ -34,6 +34,8 @@ export default function AddTransactionScreen() {
 
   const amount = parseFloat(amountText.replace(',', '.'));
   const isValid = !Number.isNaN(amount) && amount > 0;
+  const kindColor = kind === 'saved' ? colors.accent : colors.spend;
+  const kindColorDark = kind === 'saved' ? colors.accentDark : colors.spend;
 
   const handleSubmit = async () => {
     if (!isValid) return;
@@ -92,7 +94,10 @@ export default function AddTransactionScreen() {
             return (
               <PressableScale
                 key={quick}
-                style={[styles.quickChip, selected && styles.quickChipSelected]}
+                style={[
+                  styles.quickChip,
+                  selected && { backgroundColor: kindColor, borderColor: kindColorDark },
+                ]}
                 haptic="selection"
                 onPress={() => setAmountText(String(quick))}
               >
@@ -189,17 +194,15 @@ const styles = StyleSheet.create({
   quickChip: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
+    minHeight: 44,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
     borderRadius: 999,
     backgroundColor: colors.creamMuted,
     borderWidth: 1.5,
     borderColor: 'transparent',
-  },
-  quickChipSelected: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accentDark,
   },
   quickChipText: {
     ...typography.caption,
@@ -215,6 +218,9 @@ const styles = StyleSheet.create({
     marginTop: -spacing.xs,
   },
   sourceChip: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
     borderRadius: 999,

@@ -30,12 +30,18 @@ export const colors = {
   // Text on dark background
   textPrimary: '#F7F3EA',
   textSecondary: '#9BA0A8',
-  textTertiary: '#63666E',
+  // Lightened from #63666E — the original sat at ~3.5:1 against the dark
+  // background, below the 4.5:1 needed for small text like timestamps and
+  // section labels. Same muted gray, just legible.
+  textTertiary: '#7A7D84',
 
   // Text on ivory surfaces
   inkPrimary: '#181A16',
   inkSecondary: '#5C594C',
-  inkTertiary: '#8B8776',
+  // Darkened from #8B8776 — the original sat at ~3.3:1 against cream, below
+  // the 4.5:1 needed for small text like StatTile's micro labels. Same warm
+  // gray, just legible.
+  inkTertiary: '#6B6858',
 
   // Subtle glass effects on dark surfaces
   glass: 'rgba(255, 255, 255, 0.05)',

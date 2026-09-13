@@ -2,9 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Goal, Settings, Transaction, DEFAULT_SETTINGS } from '../types/models';
 
 const KEYS = {
-  goal: '@cargoal/goal',
-  transactions: '@cargoal/transactions',
-  settings: '@cargoal/settings',
+  goal: '@piggymy/goal',
+  transactions: '@piggymy/transactions',
+  settings: '@piggymy/settings',
 } as const;
 
 export async function loadGoal(): Promise<Goal | null> {

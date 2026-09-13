@@ -2,7 +2,7 @@ import React from 'react';
 import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer, Card, Button, SegmentedControl } from '../../src/components';
+import { ScreenContainer, Card, Button, SegmentedControl, LogoMark } from '../../src/components';
 import { useGoalContext } from '../../src/store/GoalContext';
 import { CurrencyCode } from '../../src/types/models';
 import { colors, spacing, typography } from '../../src/theme';
@@ -65,10 +65,15 @@ export default function SettingsScreen() {
       <SectionLabel icon="shield-checkmark-outline" text="Data" />
       <Card style={styles.card}>
         <Text style={styles.rowSubtitle}>
-          CarGoal stores everything only on this device. Nothing is uploaded anywhere.
+          PiggyMy stores everything only on this device. Nothing is uploaded anywhere.
         </Text>
       </Card>
       <Button label="Reset all data" variant="danger" onPress={handleReset} style={styles.resetButton} />
+
+      <View style={styles.footer}>
+        <LogoMark size={28} />
+        <Text style={styles.footerText}>PiggyMy</Text>
+      </View>
     </ScreenContainer>
   );
 }
@@ -126,5 +131,17 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     marginTop: spacing.xl,
+  },
+  footer: {
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xxl,
+    opacity: 0.6,
+  },
+  footerText: {
+    ...typography.micro,
+    color: colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 });

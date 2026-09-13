@@ -1,5 +1,5 @@
 /**
- * CarGoal color system — v2 "electric emerald" redesign.
+ * PiggyMy color system — v2 "electric emerald" redesign.
  * Deep graphite shell, warm ivory surfaces used sparingly, and an
  * electric emerald accent reserved for progress and success states.
  */

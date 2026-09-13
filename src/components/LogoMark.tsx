@@ -1,44 +1,25 @@
 import React from 'react';
-import { StyleSheet, Text, View, ViewStyle, StyleProp } from 'react-native';
-import { colors, fontFamily } from '../theme';
+import { StyleProp } from 'react-native';
+import { Image, ImageStyle } from 'expo-image';
+
+// Natural aspect ratio of the tightly-cropped mascot artwork (width/height),
+// so callers can size by height alone and the mark never stretches.
+const ASPECT_RATIO = 1093 / 1026;
 
 interface LogoMarkProps {
+  /** Rendered height in px; width follows the artwork's natural aspect ratio. */
   size?: number;
-  style?: StyleProp<ViewStyle>;
+  style?: StyleProp<ImageStyle>;
 }
 
-/** Compact CarGoal lettermark: an emerald badge with a soft glow, used above onboarding and on share cards. */
+/** The PiggyMy mascot mark — used above onboarding, in Settings, and on the share card. */
 export function LogoMark({ size = 40, style }: LogoMarkProps) {
   return (
-    <View
-      style={[
-        styles.badge,
-        {
-          width: size,
-          height: size,
-          borderRadius: size * 0.3,
-        },
-        style,
-      ]}
-    >
-      <Text style={[styles.letter, { fontSize: size * 0.48, lineHeight: size * 0.56 }]}>C</Text>
-    </View>
+    <Image
+      source={require('../../assets/piggymy-mark.png')}
+      style={[{ width: size * ASPECT_RATIO, height: size }, style]}
+      contentFit="contain"
+      accessibilityLabel="PiggyMy"
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  badge: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent,
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  letter: {
-    fontFamily: fontFamily.extraBold,
-    color: colors.inkPrimary,
-  },
-});

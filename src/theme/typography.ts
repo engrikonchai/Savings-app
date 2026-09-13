@@ -1,7 +1,7 @@
 import { TextStyle } from 'react-native';
 
 /**
- * Type scale for CarGoal. Uses Manrope (loaded via expo-font) with a
+ * Type scale for PiggyMy. Uses Manrope (loaded via expo-font) with a
  * system-font fallback so screens never render blank while fonts load.
  */
 export const fontFamily = {

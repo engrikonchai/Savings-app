@@ -1,30 +1,35 @@
 {
   "expo": {
-    "name": "CarGoal",
-    "slug": "cargoal",
-    "scheme": "cargoal",
+    "name": "PiggyMy",
+    "slug": "piggymy",
+    "scheme": "piggymy",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#14171A",
+    "backgroundColor": "#101114",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.cargoal.app"
+      "bundleIdentifier": "com.piggymy.app"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#14171A",
+        "backgroundColor": "#101114",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.cargoal.app"
+      "package": "com.piggymy.app"
     },
     "web": {
       "favicon": "./assets/favicon.png",
+      "name": "PiggyMy",
+      "shortName": "PiggyMy",
+      "description": "PiggyMy — save toward what matters, one euro at a time.",
+      "themeColor": "#101114",
+      "backgroundColor": "#101114",
       "basePath": "/Savings-app/"
     },
     "plugins": [
@@ -32,7 +37,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#14171A",
+          "backgroundColor": "#101114",
           "image": "./assets/icon.png",
           "imageWidth": 140
         }
@@ -40,7 +45,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "CarGoal uses your photos to let you add a picture of your goal."
+          "photosPermission": "PiggyMy uses your photos to let you add a picture of your goal."
         }
       ]
     ]

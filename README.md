@@ -1,4 +1,4 @@
-# CarGoal 🚗
+# PiggyMy 🐷
 
 A polished, iOS-first savings app for young people saving toward a first car,
 a trip, a new phone — or anything else that matters to them. No login, no

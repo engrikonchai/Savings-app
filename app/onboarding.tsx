@@ -20,10 +20,13 @@ export default function OnboardingScreen() {
     <ScreenContainer contentStyle={styles.content}>
       <View style={styles.header}>
         <Animated.View entering={FadeInUp.duration(450)} style={styles.logoWrap}>
-          <LogoMark size={40} />
+          <LogoMark size={52} />
         </Animated.View>
+        <Animated.Text entering={FadeInUp.duration(480)} style={styles.tagline}>
+          Every euro counts.
+        </Animated.Text>
         <Animated.Text entering={FadeInUp.duration(500)} style={styles.kicker}>
-          WELCOME TO CARGOAL
+          WELCOME TO PIGGYMY
         </Animated.Text>
         <Animated.Text entering={FadeInUp.duration(600).delay(80)} style={styles.title}>
           What are you{'\n'}saving for?
@@ -60,7 +63,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxl,
   },
   logoWrap: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  tagline: {
+    ...typography.caption,
+    color: colors.textTertiary,
+    fontStyle: 'italic',
+    marginBottom: spacing.xs,
   },
   kicker: {
     ...typography.micro,

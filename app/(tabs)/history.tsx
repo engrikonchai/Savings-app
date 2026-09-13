@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from '../../src/components';
+import { ScreenContainer, LogoMark } from '../../src/components';
 import { useGoalContext } from '../../src/store/GoalContext';
 import { Transaction } from '../../src/types/models';
 import { formatCurrency } from '../../src/utils/currency';
@@ -39,9 +39,7 @@ export default function HistoryScreen() {
       <Text style={styles.title}>History</Text>
       {transactions.length === 0 ? (
         <View style={styles.empty}>
-          <View style={styles.emptyIconWrap}>
-            <Ionicons name="receipt-outline" size={30} color={colors.textSecondary} />
-          </View>
+          <LogoMark size={76} style={styles.emptyMark} />
           <Text style={styles.emptyTitle}>Nothing here yet</Text>
           <Text style={styles.emptyBody}>
             Every euro you save or spend toward {goal.name} will show up here.
@@ -156,16 +154,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingBottom: spacing.xxxl,
   },
-  emptyIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.backgroundElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
+  emptyMark: {
     marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
+    opacity: 0.9,
   },
   emptyTitle: {
     ...typography.h2,

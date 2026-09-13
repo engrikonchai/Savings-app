@@ -53,7 +53,7 @@ async function shareOnWeb(dataUri: string, options: ShareViewOptions): Promise<S
     if (nav?.canShare && nav.share) {
       const response = await fetch(dataUri);
       const blob = await response.blob();
-      const file = new File([blob], options.fileName ?? 'cargoal-progress.png', { type: 'image/png' });
+      const file = new File([blob], options.fileName ?? 'piggymy-progress.png', { type: 'image/png' });
       if (nav.canShare({ files: [file] })) {
         await nav.share({ files: [file], title: options.dialogTitle });
         return { shared: true };

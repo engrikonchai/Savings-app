@@ -83,7 +83,7 @@ export const ShareCard = forwardRef<View, ShareCardProps>(function ShareCard(
 
       <View style={styles.footer}>
         <Ionicons name="flag" size={12} color={colors.accentLight} />
-        <Text style={styles.footerText}>Tracked with CarGoal</Text>
+        <Text style={styles.footerText}>Tracked with PiggyMy</Text>
       </View>
     </View>
   );

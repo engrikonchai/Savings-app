@@ -108,7 +108,7 @@ export default function ResultScreen() {
     try {
       const result = await shareViewAsImage(shareCardRef, {
         dialogTitle: `${goal.name} progress`,
-        fileName: 'cargoal-progress.png',
+        fileName: 'piggymy-progress.png',
       });
       if (result.shared) {
         await Haptics.selectionAsync().catch(() => {});

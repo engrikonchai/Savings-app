@@ -1,0 +1,259 @@
+import React, { useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
+import { ScreenContainer, Card, Button, TextField } from '../src/components';
+import { PressableScale } from '../src/components/PressableScale';
+import { GoalDateField } from '../src/components/GoalDateField';
+import { getGoalTypeMeta } from '../src/constants/goalTypes';
+import { GoalType } from '../src/types/models';
+import { useGoalContext } from '../src/store/GoalContext';
+import { formatCurrency } from '../src/utils/currency';
+import { colors, radius, spacing, typography } from '../src/theme';
+
+function defaultTargetDate(): Date {
+  const date = new Date();
+  date.setMonth(date.getMonth() + 6);
+  return date;
+}
+
+export default function CreateGoalScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ type?: string }>();
+  const { createGoal, settings } = useGoalContext();
+
+  const goalType = (params.type as GoalType) ?? 'custom';
+  const meta = useMemo(() => getGoalTypeMeta(goalType), [goalType]);
+
+  const [name, setName] = useState('');
+  const [amountText, setAmountText] = useState('');
+  const [startingAmountText, setStartingAmountText] = useState('');
+  const [targetDate, setTargetDate] = useState<Date>(defaultTargetDate());
+  const [imageUri, setImageUri] = useState<string | undefined>(undefined);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | undefined>(undefined);
+
+  const amount = parseFloat(amountText.replace(',', '.'));
+  const startingAmountRaw = parseFloat(startingAmountText.replace(',', '.'));
+  const startingAmount = Number.isNaN(startingAmountRaw) ? 0 : Math.max(0, startingAmountRaw);
+  const isValid = name.trim().length > 0 && !Number.isNaN(amount) && amount > 0 && targetDate > new Date();
+  const showStartingPreview = startingAmount > 0 && !Number.isNaN(amount) && amount > 0;
+  const startingPercent = showStartingPreview ? Math.round(Math.min(1, startingAmount / amount) * 100) : 0;
+
+  const pickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setError('Allow photo access to add a goal image.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!isValid) {
+      setError('Please fill in a name, amount and a future date.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await createGoal({
+        type: goalType,
+        name: name.trim(),
+        targetAmount: Math.round(amount),
+        targetDate: targetDate.toISOString(),
+        imageUri,
+        startingAmount,
+      });
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace('/(tabs)');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <ScreenContainer scroll contentStyle={styles.content}>
+      <View style={styles.header}>
+        <View style={styles.iconBadge}>
+          <Ionicons name={meta.icon} size={28} color={colors.accentLight} />
+        </View>
+        <Text style={styles.title}>Set up your goal</Text>
+        <Text style={styles.subtitle}>Give it a name, a target, and a deadline.</Text>
+      </View>
+
+      <Card style={styles.card}>
+        <TextField
+          label="Goal name"
+          placeholder={meta.namePlaceholder}
+          value={name}
+          onChangeText={(t) => {
+            setName(t);
+            setError(undefined);
+          }}
+          maxLength={40}
+          returnKeyType="next"
+        />
+        <TextField
+          label="Target amount"
+          placeholder="3000"
+          prefix="€"
+          keyboardType="decimal-pad"
+          value={amountText}
+          onChangeText={(t) => {
+            setAmountText(t);
+            setError(undefined);
+          }}
+        />
+
+        <TextField
+          label="Already saved (optional)"
+          placeholder="0"
+          prefix="€"
+          keyboardType="decimal-pad"
+          value={startingAmountText}
+          onChangeText={setStartingAmountText}
+        />
+        <Text style={styles.microcopy}>Start where you are — every euro counts.</Text>
+        {showStartingPreview && (
+          <View style={styles.previewPill}>
+            <Text style={styles.previewText}>
+              {formatCurrency(startingAmount, settings.currency)}
+              <Text style={styles.previewTextMuted}> / {formatCurrency(amount, settings.currency)}</Text>
+              {'  ·  '}
+              {startingPercent}% funded
+            </Text>
+          </View>
+        )}
+
+        <Text style={styles.label}>Target date</Text>
+        <GoalDateField
+          value={targetDate}
+          minimumDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
+          onChange={setTargetDate}
+        />
+
+        <Text style={[styles.label, { marginTop: spacing.md }]}>Goal photo (optional)</Text>
+        <PressableScale style={styles.imagePicker} onPress={pickImage}>
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.imagePreview} contentFit="cover" />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Ionicons name="camera-outline" size={22} color={colors.inkSecondary} />
+              <Text style={styles.imagePlaceholderText}>Add a photo</Text>
+            </View>
+          )}
+        </PressableScale>
+
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      </Card>
+
+      <View style={styles.footer}>
+        <Button label="Create goal" onPress={handleCreate} loading={submitting} disabled={!isValid} />
+      </View>
+    </ScreenContainer>
+  );
+}
+
+const styles = StyleSheet.create({
+  content: {
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
+  header: {
+    marginBottom: spacing.lg,
+  },
+  iconBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 20,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  title: {
+    ...typography.h1,
+    color: colors.textPrimary,
+    marginBottom: spacing.xxs,
+  },
+  subtitle: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+  card: {
+    marginBottom: spacing.lg,
+  },
+  label: {
+    ...typography.caption,
+    color: colors.inkSecondary,
+    marginBottom: spacing.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  microcopy: {
+    ...typography.caption,
+    color: colors.inkTertiary,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
+  previewPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.accentSoft,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  previewText: {
+    ...typography.caption,
+    color: colors.accentDark,
+  },
+  previewTextMuted: {
+    color: colors.inkTertiary,
+  },
+  imagePicker: {
+    borderRadius: radius.md,
+    overflow: 'hidden',
+  },
+  imagePlaceholder: {
+    height: 120,
+    borderRadius: radius.md,
+    backgroundColor: colors.creamMuted,
+    borderWidth: 1.5,
+    borderColor: colors.creamBorder,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xxs,
+  },
+  imagePlaceholderText: {
+    ...typography.body,
+    color: colors.inkSecondary,
+  },
+  imagePreview: {
+    height: 140,
+    width: '100%',
+    borderRadius: radius.md,
+  },
+  errorText: {
+    ...typography.caption,
+    color: colors.spend,
+    marginTop: spacing.sm,
+  },
+  footer: {
+    marginTop: spacing.lg,
+  },
+});

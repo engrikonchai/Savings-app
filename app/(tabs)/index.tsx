@@ -1,0 +1,294 @@
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Redirect, useRouter } from 'expo-router';
+import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import {
+  ScreenContainer,
+  Card,
+  ProgressRing,
+  StatTile,
+  MotivationCard,
+  FloatingActionButton,
+  PressableScale,
+  CarBuildVisual,
+} from '../../src/components';
+import { useGoalContext } from '../../src/store/GoalContext';
+import { calculateGoalProgress, calculateTargetStatus } from '../../src/utils/goalMath';
+import { formatCurrency } from '../../src/utils/currency';
+import { formatDateShort } from '../../src/utils/date';
+import { getGoalTypeMeta } from '../../src/constants/goalTypes';
+import { colors, radius, spacing, typography } from '../../src/theme';
+
+export default function HomeScreen() {
+  const { goal, transactions, settings } = useGoalContext();
+  const router = useRouter();
+
+  if (!goal) {
+    return <Redirect href="/onboarding" />;
+  }
+
+  const progress = calculateGoalProgress(goal, transactions);
+  const targetStatus = calculateTargetStatus(goal, progress);
+  const meta = getGoalTypeMeta(goal.type);
+  const currency = settings.currency;
+  const isZeroState = progress.percent === 0 && !progress.isComplete;
+  const heroContent =
+    goal.type === 'car' && !goal.imageUri ? <CarBuildVisual percent={progress.percent} /> : undefined;
+
+  let statusIcon: keyof typeof Ionicons.glyphMap = 'trending-up';
+  let statusColor: string = colors.accentLight;
+  if (isZeroState) {
+    statusIcon = 'sparkles';
+  } else if (progress.isPastDue) {
+    statusIcon = 'alert-circle-outline';
+    statusColor = colors.spend;
+  } else if (targetStatus.daysAheadBehind < 0) {
+    statusIcon = 'trending-down';
+    statusColor = colors.textSecondary;
+  }
+
+  return (
+    <ScreenContainer edges={['top', 'left', 'right']}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.headerRow}>
+          <View style={styles.headerText}>
+            <Text style={styles.eyebrow}>{meta.label.toUpperCase()}</Text>
+            <Text style={styles.goalName} numberOfLines={1}>
+              {goal.name}
+            </Text>
+          </View>
+          {goal.imageUri ? (
+            <Image source={{ uri: goal.imageUri }} style={styles.thumb} contentFit="cover" />
+          ) : (
+            <View style={styles.thumbPlaceholder}>
+              <Ionicons name={meta.icon} size={24} color={colors.textPrimary} />
+            </View>
+          )}
+        </View>
+
+        <Animated.View entering={FadeInDown.duration(600)} style={styles.ringWrap}>
+          <ProgressRing
+            progress={progress.progressRatio}
+            size={192}
+            strokeWidth={13}
+            imageUri={goal.imageUri}
+            iconName={meta.silhouetteIcon}
+            heroContent={heroContent}
+          >
+            <Text style={styles.percent}>{progress.percent}%</Text>
+            <Text style={styles.ringLabel}>funded</Text>
+          </ProgressRing>
+        </Animated.View>
+
+        <Text style={styles.amountLine} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
+          {formatCurrency(progress.savedAmount, currency)}
+          <Text style={styles.amountLineMuted}> / {formatCurrency(goal.targetAmount, currency)}</Text>
+        </Text>
+
+        {!progress.isComplete && (
+          <View style={styles.statusRow}>
+            <Ionicons name={statusIcon} size={14} color={statusColor} />
+            <Text style={styles.statusText}>
+              {isZeroState ? meta.zeroStateCopy(formatCurrency(10, currency)) : targetStatus.label}
+            </Text>
+          </View>
+        )}
+
+        {progress.isComplete ? (
+          <Card variant="cream" style={styles.completeCard}>
+            <Ionicons name="trophy" size={28} color={colors.accentDark} style={styles.completeIcon} />
+            <Text style={styles.completeTitle}>Goal reached!</Text>
+            <Text style={styles.completeBody}>
+              You hit your target for {goal.name}. Time to make it real.
+            </Text>
+          </Card>
+        ) : (
+          <>
+            <View style={styles.statsRow}>
+              <StatTile
+                icon="wallet-outline"
+                label="Remaining"
+                value={formatCurrency(progress.remainingAmount, currency)}
+                accentColor={colors.accentDark}
+              />
+              <StatTile
+                icon="calendar-outline"
+                label={progress.isPastDue ? 'Deadline' : 'Days left'}
+                value={progress.isPastDue ? 'Passed' : `${progress.daysLeft}`}
+                accentColor={progress.isPastDue ? colors.spend : colors.inkPrimary}
+              />
+            </View>
+
+            {!progress.isPastDue && (
+              <MotivationCard
+                label={`To hit your goal by ${formatDateShort(goal.targetDate)}, save`}
+                // Round up to at least the smallest visible unit so a tiny
+                // remaining pace never misleadingly displays as "€0".
+                dailyValue={formatCurrency(Math.max(progress.dailyNeeded, progress.remainingAmount > 0 ? 1 : 0), currency)}
+                weeklyValue={formatCurrency(Math.max(progress.weeklyNeeded, progress.remainingAmount > 0 ? 1 : 0), currency)}
+              />
+            )}
+          </>
+        )}
+
+      </ScrollView>
+
+      <View style={styles.fabWrap}>
+        <View style={styles.fabRow}>
+          <PressableScale
+            style={styles.realityCheckButton}
+            haptic="light"
+            onPress={() => router.push('/reality-check')}
+          >
+            <Ionicons name="help-circle-outline" size={16} color={colors.textPrimary} />
+            <Text style={styles.realityCheckText}>Should I buy it?</Text>
+          </PressableScale>
+          <FloatingActionButton label="Add money" onPress={() => router.push('/add-transaction')} />
+        </View>
+      </View>
+    </ScreenContainer>
+  );
+}
+
+const styles = StyleSheet.create({
+  content: {
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+  },
+  scroll: {
+    flex: 1,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  headerText: {
+    flexShrink: 1,
+  },
+  eyebrow: {
+    ...typography.micro,
+    color: colors.accentLight,
+    marginBottom: spacing.xxs,
+  },
+  goalName: {
+    ...typography.h1,
+    color: colors.textPrimary,
+  },
+  thumb: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+  },
+  thumbPlaceholder: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: colors.backgroundElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  ringWrap: {
+    marginVertical: spacing.xxs,
+  },
+  percent: {
+    ...typography.mega,
+    color: colors.textPrimary,
+    fontSize: 38,
+    lineHeight: 42,
+  },
+  ringLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  amountLine: {
+    ...typography.mega,
+    fontSize: 34,
+    lineHeight: 38,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  amountLineMuted: {
+    color: colors.textTertiary,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    marginBottom: spacing.sm,
+    maxWidth: '100%',
+  },
+  statusText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    flexShrink: 1,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignSelf: 'stretch',
+    marginBottom: spacing.xs,
+  },
+  completeCard: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+  },
+  completeIcon: {
+    marginBottom: spacing.xs,
+  },
+  completeTitle: {
+    ...typography.h2,
+    color: colors.inkPrimary,
+    marginBottom: spacing.xs,
+  },
+  completeBody: {
+    ...typography.body,
+    color: colors.inkSecondary,
+    textAlign: 'center',
+  },
+  // A normal (non-absolute) row below the ScrollView, not an overlay on top
+  // of it — so it can never cover scrollable content, regardless of content
+  // length or container height (mobile vs. the shorter desktop phone shell).
+  fabWrap: {
+    alignItems: 'center',
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.background,
+  },
+  fabRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  realityCheckButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xxs,
+    minHeight: 44,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.glass,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  realityCheckText: {
+    ...typography.caption,
+    color: colors.textPrimary,
+  },
+});

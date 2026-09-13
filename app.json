@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "PiggyMy",
+    "slug": "piggymy",
+    "scheme": "piggymy",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#101114",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.piggymy.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#101114",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.piggymy.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "name": "PiggyMy",
+      "shortName": "PiggyMy",
+      "description": "PiggyMy — save toward what matters, one euro at a time.",
+      "themeColor": "#101114",
+      "backgroundColor": "#101114",
+      "basePath": "/Savings-app/"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#101114",
+          "image": "./assets/icon.png",
+          "imageWidth": 140
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "PiggyMy uses your photos to let you add a picture of your goal."
+        }
+      ]
+    ]
+  }
+}

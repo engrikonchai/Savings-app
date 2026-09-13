@@ -4,6 +4,7 @@ import { BottomNav, type TabName } from '../components/BottomNav';
 import { BrandMark, ChevronRight } from '../components/Icon';
 import { SectionLabel, Chip } from '../components/ui';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { CURRENCIES } from '../lib/currency';
 import type { ThemeMode } from '../lib/types';
 import { NAV_HEIGHT } from '../lib/layout';
@@ -12,10 +13,12 @@ interface Props {
   onNavigate: (tab: TabName) => void;
   onManageGoals: () => void;
   onEditGoal: () => void;
+  onSignIn: () => void;
 }
 
-export const Profile: React.FC<Props> = ({ onNavigate, onManageGoals, onEditGoal }) => {
-  const { state, toggleNotif, setThemeMode, setCurrency, setProfileName } = useApp();
+export const Profile: React.FC<Props> = ({ onNavigate, onManageGoals, onEditGoal, onSignIn }) => {
+  const { state, isDemoMode, toggleNotif, setThemeMode, setCurrency, setProfileName } = useApp();
+  const { user, signOut } = useAuth();
   const goal = state.goal!;
   const [showCurrency, setShowCurrency] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -50,9 +53,27 @@ export const Profile: React.FC<Props> = ({ onNavigate, onManageGoals, onEditGoal
                 {state.profileName}
               </div>
             )}
-            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Saving for {goal.name}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+              {isDemoMode ? `Previewing · Saving for ${goal.name}` : `Saving for ${goal.name}`}
+            </div>
           </div>
         </div>
+
+        {isDemoMode ? (
+          <div
+            onClick={onSignIn}
+            role="button"
+            style={{ background: 'var(--blue-tint)', border: '1px solid var(--blue-border)', borderRadius: 16, padding: 16, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+          >
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>You're previewing a demo</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Sign in to save your real goal to the cloud</div>
+            </div>
+            <ChevronRight color="var(--blue)" />
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 16 }}>Signed in as {user?.email}</div>
+        )}
 
         <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', marginBottom: 16 }}>
           <Row label="Manage goals" onClick={onManageGoals} />
@@ -80,7 +101,7 @@ export const Profile: React.FC<Props> = ({ onNavigate, onManageGoals, onEditGoal
               </div>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottom: isDemoMode ? 'none' : '0.5px solid var(--divider)' }}>
             <span style={{ fontSize: 15, color: 'var(--text)' }}>Notifications</span>
             <div
               onClick={toggleNotif}
@@ -90,6 +111,11 @@ export const Profile: React.FC<Props> = ({ onNavigate, onManageGoals, onEditGoal
               <div style={{ position: 'absolute', top: 2, left: state.notifEnabled ? 20 : 2, width: 22, height: 22, borderRadius: 9999, background: '#FFFFFF', transition: 'left 0.15s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
             </div>
           </div>
+          {!isDemoMode && (
+            <div onClick={() => signOut()} role="button" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, cursor: 'pointer' }}>
+              <span style={{ fontSize: 15, color: 'var(--negative)', fontWeight: 600 }}>Log out</span>
+            </div>
+          )}
         </div>
 
         <SectionLabel>Appearance</SectionLabel>

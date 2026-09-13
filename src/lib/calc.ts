@@ -1,4 +1,4 @@
-import type { Goal } from './types';
+import type { DbGoal, DbTransaction, Goal, Transaction } from './types';
 
 const DAY_MS = 86_400_000;
 const WEEK_MS = 7 * DAY_MS;
@@ -80,4 +80,65 @@ export function formatDaysLabel(days: number): string {
   const abs = Math.abs(days);
   const sign = days >= 0 ? '+' : '-';
   return `${sign}${abs.toFixed(1)} day${abs === 1 ? '' : 's'}`;
+}
+
+// ---- Cloud replay: the saved amount and predicted date are never stored directly for a --
+// ---- signed-in goal — they're rebuilt from the transaction log every time it's loaded. --
+
+export interface ReplayedGoal {
+  goal: Goal;
+  transactions: Transaction[];
+}
+
+function noteToKindAndLabel(type: DbTransaction['type'], note: string | null): { kind: Transaction['kind']; label: string } {
+  if (type === 'withdrawal') return { kind: 'purchase', label: note?.trim() || 'Purchase' };
+  if (note?.startsWith('Skipped:')) return { kind: 'skip', label: note };
+  return { kind: 'contribution', label: note?.trim() || 'Contribution' };
+}
+
+/** Replays a goal's full transaction history in chronological order, applying the same
+ * pace/Dream-Days math the UI uses live, so the saved amount and predicted date are always
+ * exactly what the ledger implies — never a separately-stored value that could drift. */
+export function replayGoal(dbGoal: DbGoal, dbTransactions: DbTransaction[]): ReplayedGoal {
+  const sorted = [...dbTransactions].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+  let saved = 0;
+  let predicted = new Date(dbGoal.target_date);
+  const transactions: Transaction[] = [];
+
+  for (const tx of sorted) {
+    const txDate = new Date(tx.created_at);
+    const remaining = Math.max(0, dbGoal.target_amount - saved);
+    const weeksLeft = weeksBetween(txDate, predicted);
+    const weekly = remaining <= 0 ? 0 : Math.max(1, Math.ceil(remaining / weeksLeft));
+    const delta = daysWorth(tx.amount, weekly);
+    const isSpend = tx.type === 'withdrawal';
+
+    saved = isSpend ? Math.max(0, saved - tx.amount) : saved + tx.amount;
+    predicted = clampFutureDate(addDays(predicted, isSpend ? delta : -delta), txDate);
+
+    const { kind, label } = noteToKindAndLabel(tx.type, tx.note);
+    transactions.push({
+      id: tx.id,
+      kind,
+      label,
+      amount: tx.amount,
+      date: tx.created_at,
+      daysDelta: isSpend ? -delta : delta,
+    });
+  }
+
+  const goal: Goal = {
+    typeId: dbGoal.goal_type,
+    name: dbGoal.name,
+    targetAmount: dbGoal.target_amount,
+    currentSaved: saved,
+    predictedDate: predicted.toISOString(),
+    createdAt: dbGoal.created_at,
+  };
+
+  // Most-recent-first for display (History, Recent Activity).
+  transactions.reverse();
+
+  return { goal, transactions };
 }

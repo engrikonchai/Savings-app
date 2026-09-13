@@ -10,8 +10,12 @@ import { currencySymbol } from '../../lib/currency';
 
 type Step = 'welcome' | 'choose' | 'step1' | 'step2' | 'step3' | 'done';
 
-export const OnboardingFlow: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
-  const { createGoal, today, state } = useApp();
+interface Props {
+  onComplete: () => void;
+}
+
+export const OnboardingFlow: React.FC<Props> = ({ onComplete }) => {
+  const { createGoal, today, state, dataLoading, dataError, clearDataError } = useApp();
   const [step, setStep] = useState<Step>('welcome');
   const [typeId, setTypeId] = useState<GoalTypeId>('car');
   const [name, setName] = useState(goalTypeDef('car').defaultName);
@@ -35,24 +39,26 @@ export const OnboardingFlow: React.FC<{ onComplete: () => void }> = ({ onComplet
   };
 
   const handleSelectType = (id: GoalTypeId) => {
+    // Set both together, from the id argument rather than the `typeId` state — setting name
+    // in a later handler that reads `typeId` via closure risks a stale value if this handler
+    // and the next one both fire before React re-renders in between (e.g. two rapid clicks).
     setTypeId(id);
+    setName(goalTypeDef(id).defaultName);
   };
 
   const goChoose = () => setStep('choose');
-  const goStep1 = () => {
-    setName(goalTypeDef(typeId).defaultName);
-    setStep('step1');
-  };
+  const goStep1 = () => setStep('step1');
 
-  const finish = () => {
-    createGoal({
+  const finish = async () => {
+    clearDataError();
+    const ok = await createGoal({
       typeId,
       name: name.trim() || goalTypeDef(typeId).defaultName,
       targetAmount: amount,
       currentSaved: current,
       predictedDate: targetDate.toISOString(),
     });
-    setStep('done');
+    if (ok) setStep('done');
   };
 
   if (step === 'welcome') return <Welcome onStart={goChoose} />;
@@ -95,6 +101,8 @@ export const OnboardingFlow: React.FC<{ onComplete: () => void }> = ({ onComplet
         targetLabel={targetLabel}
         onBack={() => setStep(back.step3)}
         onFinish={finish}
+        submitting={dataLoading}
+        error={dataError}
       />
     );
   }

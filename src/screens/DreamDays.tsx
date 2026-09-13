@@ -24,6 +24,8 @@ export const DreamDays: React.FC<Props> = ({ onDone, onGoalCompleted }) => {
   const [name, setName] = useState('');
   const [result, setResult] = useState<Result>(null);
   const [newDateLabel, setNewDateLabel] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const pace = computePace(goal, today);
   const costDays = daysWorth(amount, pace.weekly);
@@ -31,21 +33,39 @@ export const DreamDays: React.FC<Props> = ({ onDone, onGoalCompleted }) => {
   const previewNewDate = clampFutureDate(addDays(goal.predictedDate, costDays), today);
   const previewNewDateLabel = formatDayMonth(previewNewDate);
 
-  const skipIt = () => {
-    const tx = addSkip(amount, name);
-    const shifted = clampFutureDate(addDays(goal.predictedDate, -tx.daysDelta), today);
-    setNewDateLabel(formatDayMonth(shifted));
-    setResult('skipped');
-    if (goal.currentSaved + amount >= goal.targetAmount) {
-      setTimeout(onGoalCompleted, 1400);
+  const skipIt = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const tx = await addSkip(amount, name);
+      const shifted = clampFutureDate(addDays(goal.predictedDate, -tx.daysDelta), today);
+      setNewDateLabel(formatDayMonth(shifted));
+      setResult('skipped');
+      if (goal.currentSaved + amount >= goal.targetAmount) {
+        setTimeout(onGoalCompleted, 1400);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save that. Try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const buyAnyway = () => {
-    const tx = addPurchase(amount, name);
-    const shifted = clampFutureDate(addDays(goal.predictedDate, -tx.daysDelta), today);
-    setNewDateLabel(formatDayMonth(shifted));
-    setResult('bought');
+  const buyAnyway = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const tx = await addPurchase(amount, name);
+      const shifted = clampFutureDate(addDays(goal.predictedDate, -tx.daysDelta), today);
+      setNewDateLabel(formatDayMonth(shifted));
+      setResult('bought');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not log that. Try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (result === 'skipped') {
@@ -80,10 +100,26 @@ export const DreamDays: React.FC<Props> = ({ onDone, onGoalCompleted }) => {
   }
 
   return (
-    <Shell showBack onBack={onDone} bottomSlot={<TwoChoiceBar primaryLabel="Skip it — save instead" onPrimary={skipIt} secondaryLabel="Buy anyway" onSecondary={buyAnyway} />}>
+    <Shell
+      showBack
+      onBack={onDone}
+      bottomSlot={
+        <TwoChoiceBar
+          primaryLabel={submitting ? 'Saving…' : 'Skip it — save instead'}
+          onPrimary={skipIt}
+          secondaryLabel={submitting ? 'Saving…' : 'Buy anyway'}
+          onSecondary={buyAnyway}
+        />
+      }
+    >
       <div className="fade-in" style={{ padding: '104px 28px 150px', boxSizing: 'border-box' }}>
         <div style={{ fontSize: 25, fontWeight: 800, letterSpacing: '-0.01em', color: 'var(--text)', marginBottom: 8 }}>Should I buy it?</div>
         <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 28 }}>No judgment — just information.</div>
+        {error && (
+          <div style={{ background: 'rgba(255,59,48,0.12)', border: '1px solid rgba(255,59,48,0.3)', borderRadius: 12, padding: '10px 14px', marginBottom: 20 }}>
+            <span style={{ fontSize: 13, color: 'var(--negative)', fontWeight: 500 }}>{error}</span>
+          </div>
+        )}
 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, justifyContent: 'center', borderBottom: '1.5px dashed var(--divider)', paddingBottom: 8, marginBottom: 8 }}>
           <span style={{ fontSize: 32, fontWeight: 800, color: 'var(--text)' }}>{symbol}</span>

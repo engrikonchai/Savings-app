@@ -186,21 +186,32 @@ interface Step3Props {
   targetLabel: string;
   onBack: () => void;
   onFinish: () => void;
+  submitting?: boolean;
+  error?: string | null;
 }
 
 export function monthOptionDate(today: Date, monthsAhead: number): Date {
   return new Date(today.getFullYear(), today.getMonth() + monthsAhead, 15);
 }
 
-export const Step3: React.FC<Step3Props> = ({ today, monthIndex, onChangeMonthIndex, weeklyLabel, targetLabel, onBack, onFinish }) => {
+export const Step3: React.FC<Step3Props> = ({ today, monthIndex, onChangeMonthIndex, weeklyLabel, targetLabel, onBack, onFinish, submitting, error }) => {
   const options = Array.from({ length: 18 }, (_, i) => monthOptionDate(today, i + 1));
   return (
-    <Shell showBack onBack={onBack} bottomSlot={<PrimaryCTA label="Start building my goal" onClick={onFinish} />}>
+    <Shell
+      showBack
+      onBack={onBack}
+      bottomSlot={<PrimaryCTA label={submitting ? 'Creating…' : 'Start building my goal'} onClick={onFinish} disabled={submitting} />}
+    >
       <StepProgress step={3} />
       <div className="fade-in" style={{ boxSizing: 'border-box', padding: '22px 0 100px' }}>
         <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.01em', lineHeight: 1.15, color: 'var(--text)', marginBottom: 18, padding: '0 28px' }}>
           When do you want it?
         </div>
+        {error && (
+          <div style={{ margin: '0 28px 18px', background: 'rgba(255,59,48,0.12)', border: '1px solid rgba(255,59,48,0.3)', borderRadius: 12, padding: '10px 14px' }}>
+            <span style={{ fontSize: 13, color: 'var(--negative)', fontWeight: 500 }}>{error}</span>
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '0 28px 6px', marginBottom: 26 }}>
           {options.map((d, i) => (
             <Chip key={i} label={formatMonthYear(d)} selected={i === monthIndex} onClick={() => onChangeMonthIndex(i)} />

@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider, useApp, useIsDark } from './context/AppContext';
+import { AuthScreen } from './screens/auth/AuthScreen';
+import { LoadingScreen } from './screens/LoadingScreen';
 import { OnboardingFlow } from './screens/onboarding/OnboardingFlow';
 import { Dashboard } from './screens/Dashboard';
 import { AddMoney } from './screens/AddMoney';
@@ -14,29 +17,56 @@ import type { TabName } from './components/BottomNav';
 
 type Screen = TabName | 'addMoney' | 'dreamDays' | 'manageGoals' | 'editGoal' | 'celebration';
 
-const Main: React.FC = () => {
+/**
+ * Gates on auth/loading only — no onboarding logic here. This keeps "is there a goal yet"
+ * out of this component's own state, so it never has to reconcile a stale snapshot against
+ * a `state.goal` that can change mid-flow (e.g. the instant a new goal is created).
+ */
+const Root: React.FC = () => {
+  const { authLoading, session, configured } = useAuth();
+  const { initialLoading } = useApp();
+  const [guestPreview, setGuestPreview] = useState(false);
+
+  if (authLoading) return <LoadingScreen label="Checking your session…" />;
+
+  // Not signed in: gate behind the auth screen, unless the user asked to preview the demo,
+  // or Supabase isn't configured at all (in which case guest/demo is the only mode available).
+  if (!session && !guestPreview && configured) {
+    return <AuthScreen onContinueAsGuest={() => setGuestPreview(true)} />;
+  }
+
+  // For a signed-in user, wait out the one-time fetch of their existing goal (if any) before
+  // mounting AppShell below — that's what lets AppShell's own "do we need onboarding" snapshot
+  // be taken safely exactly once, with state.goal already reflecting the real answer.
+  if (session && initialLoading) return <LoadingScreen label="Loading your goal…" />;
+
+  return <AppShell key={session?.user.id ?? 'guest'} onSignInFromGuest={() => setGuestPreview(false)} />;
+};
+
+/**
+ * Owns all post-auth navigation state. Remounted (fresh `key`) whenever the signed-in
+ * identity changes, and only ever mounted once the initial data fetch for that identity has
+ * settled — so `showOnboarding`'s lazy initializer reads a trustworthy state.goal exactly
+ * once. After that, it changes only in response to the user explicitly finishing onboarding
+ * (OnboardingFlow's onComplete) — never by reacting to state.goal again — so a goal that
+ * gets created *during* the flow can't unmount the flow out from under its own success screen.
+ */
+const AppShell: React.FC<{ onSignInFromGuest: () => void }> = ({ onSignInFromGuest }) => {
   const { state } = useApp();
   const isDark = useIsDark();
   const [screen, setScreen] = useState<Screen>('dashboard');
-  // Tracked separately from state.onboarded: the goal is created (and onboarded flips true)
-  // a step before the user actually dismisses the "Your goal is live." success screen, so
-  // gating on state.onboarded alone would unmount onboarding out from under that screen.
-  const [onboardingActive, setOnboardingActive] = useState(() => !state.onboarded || !state.goal);
+  const [showOnboarding, setShowOnboarding] = useState(() => !state.goal);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
-  if (onboardingActive) {
-    return (
-      <OnboardingFlow
-        onComplete={() => {
-          setOnboardingActive(false);
-          setScreen('dashboard');
-        }}
-      />
-    );
+  if (showOnboarding) {
+    return <OnboardingFlow onComplete={() => setShowOnboarding(false)} />;
   }
+
+  // Defensive only: showOnboarding's snapshot should guarantee this. Not expected to trigger.
+  if (!state.goal) return <LoadingScreen label="Loading your goal…" />;
 
   const goTab = (tab: TabName) => setScreen(tab);
 
@@ -60,7 +90,9 @@ const Main: React.FC = () => {
     case 'insights':
       return <Insights onNavigate={goTab} />;
     case 'profile':
-      return <Profile onNavigate={goTab} onManageGoals={() => setScreen('manageGoals')} onEditGoal={() => setScreen('editGoal')} />;
+      return (
+        <Profile onNavigate={goTab} onManageGoals={() => setScreen('manageGoals')} onEditGoal={() => setScreen('editGoal')} onSignIn={onSignInFromGuest} />
+      );
     case 'manageGoals':
       return <ManageGoals onBack={() => setScreen('profile')} />;
     case 'editGoal':
@@ -73,9 +105,11 @@ const Main: React.FC = () => {
 };
 
 const App: React.FC = () => (
-  <AppProvider>
-    <Main />
-  </AppProvider>
+  <AuthProvider>
+    <AppProvider>
+      <Root />
+    </AppProvider>
+  </AuthProvider>
 );
 
 export default App;

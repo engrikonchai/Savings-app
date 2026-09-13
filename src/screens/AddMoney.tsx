@@ -26,16 +26,26 @@ export const AddMoney: React.FC<Props> = ({ onDone, onGoalCompleted }) => {
   const [focused, setFocused] = useState(false);
   const [source, setSource] = useState('Salary');
   const [result, setResult] = useState<{ amount: number; daysDelta: number; newSaved: number } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const confirm = () => {
-    if (amount <= 0) return;
-    const tx = addContribution(amount, source);
-    const newSaved = goal.currentSaved + amount;
-    setResult({ amount, daysDelta: tx.daysDelta, newSaved });
-    setStep('success');
-    if (newSaved >= goal.targetAmount) {
-      // let the success message render briefly before handing off to the celebration flow
-      setTimeout(onGoalCompleted, 1400);
+  const confirm = async () => {
+    if (amount <= 0 || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const tx = await addContribution(amount, source);
+      const newSaved = goal.currentSaved + amount;
+      setResult({ amount, daysDelta: tx.daysDelta, newSaved });
+      setStep('success');
+      if (newSaved >= goal.targetAmount) {
+        // let the success message render briefly before handing off to the celebration flow
+        setTimeout(onGoalCompleted, 1400);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not add that. Try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -87,9 +97,18 @@ export const AddMoney: React.FC<Props> = ({ onDone, onGoalCompleted }) => {
   }
 
   return (
-    <Shell showBack onBack={onDone} bottomSlot={<PrimaryCTA label={`Add ${symbol}${amount}`} onClick={confirm} disabled={amount <= 0} />}>
+    <Shell
+      showBack
+      onBack={onDone}
+      bottomSlot={<PrimaryCTA label={submitting ? 'Adding…' : `Add ${symbol}${amount}`} onClick={confirm} disabled={amount <= 0 || submitting} />}
+    >
       <div className="fade-in" style={{ padding: '104px 28px 130px', boxSizing: 'border-box' }}>
         <div style={{ fontSize: 25, fontWeight: 800, letterSpacing: '-0.01em', color: 'var(--text)', marginBottom: 30 }}>Add money</div>
+        {error && (
+          <div style={{ background: 'rgba(255,59,48,0.12)', border: '1px solid rgba(255,59,48,0.3)', borderRadius: 12, padding: '10px 14px', marginBottom: 18 }}>
+            <span style={{ fontSize: 13, color: 'var(--negative)', fontWeight: 500 }}>{error}</span>
+          </div>
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginBottom: 30 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, borderBottom: '1.5px dashed var(--divider)', paddingBottom: 8 }}>
             <span style={{ fontSize: 36, fontWeight: 800, color: 'var(--text)' }}>{symbol}</span>

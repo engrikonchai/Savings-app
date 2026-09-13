@@ -20,8 +20,8 @@ export const EditGoal: React.FC<Props> = ({ onBack, onSaved }) => {
   const [name, setName] = useState(goal.name);
   const [amount, setAmount] = useState(goal.targetAmount);
   const [amountFocused, setAmountFocused] = useState(false);
-  const [current, setCurrent] = useState(goal.currentSaved);
-  const [currentFocused, setCurrentFocused] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const options = useMemo(() => Array.from({ length: 18 }, (_, i) => monthOptionDate(today, i + 1)), [today]);
   const initialIndex = useMemo(() => {
@@ -33,23 +33,40 @@ export const EditGoal: React.FC<Props> = ({ onBack, onSaved }) => {
 
   const targetDate = options[monthIndex];
   const weeks = weeksBetween(today, targetDate);
-  const remaining = Math.max(0, amount - current);
+  const remaining = Math.max(0, amount - goal.currentSaved);
   const weekly = Math.ceil(remaining / weeks);
 
-  const save = () => {
-    editGoal({
-      name: name.trim() || goal.name,
-      targetAmount: amount,
-      currentSaved: current,
-      predictedDate: targetDate.toISOString(),
-    });
-    onSaved();
+  const save = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await editGoal({
+        name: name.trim() || goal.name,
+        targetAmount: amount,
+        predictedDate: targetDate.toISOString(),
+      });
+      onSaved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save your changes.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <Shell showBack onBack={onBack} bottomSlot={<PrimaryCTA label="Save changes" onClick={save} disabled={!name.trim() || amount <= 0} />}>
+    <Shell
+      showBack
+      onBack={onBack}
+      bottomSlot={<PrimaryCTA label={submitting ? 'Saving…' : 'Save changes'} onClick={save} disabled={!name.trim() || amount <= 0 || submitting} />}
+    >
       <div className="fade-in" style={{ padding: '104px 28px 130px', boxSizing: 'border-box' }}>
         <div style={{ fontSize: 25, fontWeight: 800, letterSpacing: '-0.01em', color: 'var(--text)', marginBottom: 26 }}>Edit goal</div>
+        {error && (
+          <div style={{ background: 'rgba(255,59,48,0.12)', border: '1px solid rgba(255,59,48,0.3)', borderRadius: 12, padding: '10px 14px', marginBottom: 20 }}>
+            <span style={{ fontSize: 13, color: 'var(--negative)', fontWeight: 500 }}>{error}</span>
+          </div>
+        )}
 
         <SectionLabel>Name</SectionLabel>
         <input
@@ -73,16 +90,14 @@ export const EditGoal: React.FC<Props> = ({ onBack, onSaved }) => {
         </div>
 
         <SectionLabel>Already saved</SectionLabel>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 26 }}>
-          <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>{symbol}</span>
-          <input
-            value={currentFocused ? String(current || '') : current.toLocaleString('en-US')}
-            onChange={(e) => setCurrent(parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
-            onFocus={() => setCurrentFocused(true)}
-            onBlur={() => setCurrentFocused(false)}
-            inputMode="numeric"
-            style={{ width: 160, background: 'transparent', border: 'none', borderBottom: '1px solid var(--divider)', fontSize: 24, fontWeight: 800, color: 'var(--text)', outline: 'none' }}
-          />
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 8 }}>
+          <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-secondary)' }}>
+            {symbol}
+            {goal.currentSaved.toLocaleString('en-US')}
+          </span>
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 26 }}>
+          Calculated from your transaction history — add money or log a Dream Days decision to change it.
         </div>
 
         <SectionLabel>Target date</SectionLabel>

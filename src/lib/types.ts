@@ -39,3 +39,42 @@ export interface AppState {
 }
 
 export const STORAGE_KEY = 'savings-app-state-v1';
+
+// ---- Supabase-backed shapes (signed-in mode) -------------------------------------------
+
+export type DbTransactionType = 'deposit' | 'withdrawal';
+
+/** Row shape of the `goals` table. `target_date` is the immutable date chosen at creation —
+ * the live "predicted date" shown in the UI is derived from it plus every transaction since,
+ * never stored directly (see replayGoal in calc.ts). */
+export interface DbGoal {
+  id: string;
+  user_id: string;
+  name: string;
+  goal_type: GoalTypeId;
+  target_amount: number;
+  target_date: string;
+  icon: string | null;
+  color: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Row shape of the `transactions` table. A 'deposit' is a contribution or a Dream Days
+ * "skip it" (money that would've been spent, saved instead); a 'withdrawal' is a Dream Days
+ * "buy anyway" (money taken out of savings for the impulse purchase). */
+export interface DbTransaction {
+  id: string;
+  user_id: string;
+  goal_id: string;
+  amount: number;
+  type: DbTransactionType;
+  note: string | null;
+  created_at: string;
+}
+
+export interface DbProfile {
+  id: string;
+  display_name: string | null;
+  created_at: string;
+}

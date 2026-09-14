@@ -8,7 +8,6 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 export const supabaseConfigured = Boolean(url && anonKey);
 
 if (!supabaseConfigured) {
-  // eslint-disable-next-line no-console
   console.warn(
     '[supabase] VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are not set — running in local guest mode only. See .env.example.',
   );

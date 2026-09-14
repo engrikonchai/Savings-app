@@ -2,7 +2,7 @@ import React from 'react';
 import { Shell } from '../../components/Shell';
 import { PrimaryCTA } from '../../components/PrimaryCTA';
 import { GoalIcon } from '../../components/Icon';
-import { Chip } from '../../components/ui';
+import { Chip, ColorPicker } from '../../components/ui';
 import { formatMonthYear } from '../../lib/calc';
 import type { GoalTypeId } from '../../lib/types';
 
@@ -27,12 +27,14 @@ interface Step1Props {
   typeLabel: string;
   photoPrompt: string;
   name: string;
+  color: string;
   onChangeName: (v: string) => void;
+  onChangeColor: (v: string) => void;
   onBack: () => void;
   onContinue: () => void;
 }
 
-export const Step1: React.FC<Step1Props> = ({ typeId, typeLabel, photoPrompt, name, onChangeName, onBack, onContinue }) => (
+export const Step1: React.FC<Step1Props> = ({ typeId, typeLabel, photoPrompt, name, color, onChangeName, onChangeColor, onBack, onContinue }) => (
   <Shell showBack onBack={onBack} bottomSlot={<PrimaryCTA label="Continue" onClick={onContinue} disabled={!name.trim()} />}>
     <StepProgress step={1} />
     <div className="fade-in" style={{ boxSizing: 'border-box', padding: '22px 28px 100px' }}>
@@ -120,6 +122,13 @@ export const Step1: React.FC<Step1Props> = ({ typeId, typeLabel, photoPrompt, na
             outline: 'none',
           }}
         />
+      </div>
+
+      <div style={{ marginTop: 26 }}>
+        <div style={{ fontSize: 11, letterSpacing: '0.08em', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 10 }}>
+          Color
+        </div>
+        <ColorPicker value={color} onChange={onChangeColor} />
       </div>
     </div>
   </Shell>

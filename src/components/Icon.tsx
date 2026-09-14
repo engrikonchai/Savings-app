@@ -101,6 +101,21 @@ export const BrandMark: React.FC<{ size?: number; bg: string; bar: string }> = (
   </div>
 );
 
+/**
+ * The OLYVI parent-brand mark: a minimal circular "O" monogram with a small olive leaf
+ * attached at the upper right. Deliberately just two shapes (a ring + a single pointed leaf)
+ * so it stays legible at very small sizes — a splash-screen or "by OLYVI" byline mark, never
+ * this app's own icon (see BrandMark for that). Monochrome by default via `currentColor`.
+ */
+export const OlyviMark: React.FC<{ size?: number; color?: string }> = ({ size = 24, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+    <circle cx="50" cy="54" r="32" stroke={color} strokeWidth="9" />
+    <g transform="translate(73.4,30.6) rotate(-45)">
+      <path d="M0,0 C7,-3.4 14,-3.4 20,0 C14,3.4 7,3.4 0,0 Z" fill={color} />
+    </g>
+  </svg>
+);
+
 export const NavHomeIcon: React.FC<{ color: string }> = ({ color }) => (
   <svg width="20" height="19" viewBox="0 0 20 19">
     <path d="M2 8L10 1L18 8V17C18 17.6 17.6 18 17 18H12V12H8V18H3C2.4 18 2 17.6 2 17V8Z" fill={color} />

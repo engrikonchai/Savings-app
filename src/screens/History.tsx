@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Shell } from '../components/Shell';
 import { BottomNav, type TabName } from '../components/BottomNav';
 import { EmptyState } from '../components/ui';
@@ -12,9 +12,19 @@ interface Props {
 }
 
 export const History: React.FC<Props> = ({ onNavigate }) => {
-  const { state, today } = useApp();
+  const { state, today, isDemoMode, deleteTransaction } = useApp();
   const symbol = currencySymbol(state.currency);
   const txs = state.transactions;
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const remove = async (id: string, label: string) => {
+    if (isDemoMode || deletingId) return;
+    const ok = window.confirm(`Delete "${label}"? Your goal's saved amount will update to match.`);
+    if (!ok) return;
+    setDeletingId(id);
+    await deleteTransaction(id);
+    setDeletingId(null);
+  };
 
   const thisMonth = txs.filter((t) => {
     const d = new Date(t.date);
@@ -58,12 +68,24 @@ export const History: React.FC<Props> = ({ onNavigate }) => {
               return (
                 <div key={h.id} style={{ position: 'relative', paddingBottom: i === txs.length - 1 ? 0 : 22 }}>
                   <div style={{ position: 'absolute', left: -18, top: 4, width: 9, height: 9, borderRadius: 9999, background: dotColor, boxShadow: '0 0 0 3px var(--bg)' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2, gap: 8 }}>
                     <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{h.label}</span>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: amountColor }}>
-                      {h.kind === 'purchase' ? '-' : '+'}
-                      {formatMoney(h.amount, symbol)}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexShrink: 0 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: amountColor }}>
+                        {h.kind === 'purchase' ? '-' : '+'}
+                        {formatMoney(h.amount, symbol)}
+                      </span>
+                      {!isDemoMode && (
+                        <span
+                          onClick={() => remove(h.id, h.label)}
+                          role="button"
+                          aria-label={`Delete ${h.label}`}
+                          style={{ fontSize: 12, color: 'var(--text-tertiary)', cursor: deletingId ? 'default' : 'pointer', opacity: deletingId === h.id ? 0.5 : 1 }}
+                        >
+                          {deletingId === h.id ? '…' : '✕'}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                     <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{dateLabel}</span>

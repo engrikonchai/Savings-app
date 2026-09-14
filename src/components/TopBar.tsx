@@ -49,7 +49,7 @@ export const TopBar: React.FC<Props> = ({ showBack, onBack, showWordmark }) => (
           color: 'var(--text)',
         }}
       >
-        [APP NAME]
+        Dreamsaver
       </div>
     )}
     <div style={{ position: 'absolute', top: pt(TOPBAR_TOP + 2), right: 16, zIndex: 30 }}>

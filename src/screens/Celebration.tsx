@@ -116,7 +116,7 @@ export const Celebration: React.FC<Props> = ({ onBack }) => {
           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', padding: '0 12px', textAlign: 'center' }}>{goal.name}</div>
           <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Goal reached</div>
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--blue)' }}>{formatMoney(goal.targetAmount, symbol)}</div>
-          <div style={{ fontSize: 9, color: 'var(--text-tertiary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>[APP NAME]</div>
+          <div style={{ fontSize: 9, color: 'var(--text-tertiary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Dreamsaver</div>
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 24, position: 'relative', zIndex: 1 }}>Shareable story card — 9:16</div>
 

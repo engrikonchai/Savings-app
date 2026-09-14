@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Shell } from '../components/Shell';
 import { BottomNav, type TabName } from '../components/BottomNav';
-import { BrandMark, ChevronRight } from '../components/Icon';
+import { BrandMark, ChevronRight, OlyviMark } from '../components/Icon';
 import { SectionLabel, Chip } from '../components/ui';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -54,7 +54,11 @@ export const Profile: React.FC<Props> = ({ onNavigate, onManageGoals, onEditGoal
               </div>
             )}
             <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-              {isDemoMode ? `Previewing · Saving for ${goal.name}` : `Saving for ${goal.name}`}
+              {isDemoMode
+                ? `Previewing · Saving for ${goal.name}`
+                : state.goals.length > 1
+                  ? `Saving toward ${state.goals.length} goals`
+                  : `Saving for ${goal.name}`}
             </div>
           </div>
         </div>
@@ -134,11 +138,21 @@ export const Profile: React.FC<Props> = ({ onNavigate, onManageGoals, onEditGoal
             );
           })}
         </div>
-        <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Follows your iPhone's appearance unless you override it.</div>
+        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 30 }}>Follows your iPhone's appearance unless you override it.</div>
+
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+            <OlyviMark size={11} color="var(--text-tertiary)" />
+            <span style={{ fontSize: 11, color: 'var(--text-tertiary)', letterSpacing: '0.02em' }}>Dreamsaver by OLYVI</span>
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>v{APP_VERSION}</div>
+        </div>
       </div>
     </Shell>
   );
 };
+
+const APP_VERSION = '1.0.0';
 
 const Row: React.FC<{ label: string; value?: string; onClick: () => void; noBorder?: boolean }> = ({ label, value, onClick, noBorder }) => (
   <div

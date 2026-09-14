@@ -1,4 +1,4 @@
--- [APP NAME] — Supabase schema
+-- Dreamsaver (by OLYVI) — Supabase schema
 -- Run this once in your project's SQL Editor (https://supabase.com/dashboard/project/_/sql/new).
 -- Safe to re-run: every statement is guarded with IF NOT EXISTS / OR REPLACE / DROP ... IF EXISTS.
 
@@ -108,9 +108,15 @@ drop policy if exists "transactions_select_own" on public.transactions;
 create policy "transactions_select_own" on public.transactions
   for select using (auth.uid() = user_id);
 
+-- Requires both that the row's own user_id is the caller AND that goal_id actually points at
+-- a goal the caller owns — without the second check, a caller could set user_id to themself
+-- but goal_id to someone else's goal and log a transaction against another user's goal.
 drop policy if exists "transactions_insert_own" on public.transactions;
 create policy "transactions_insert_own" on public.transactions
-  for insert with check (auth.uid() = user_id);
+  for insert with check (
+    auth.uid() = user_id
+    and exists (select 1 from public.goals g where g.id = goal_id and g.user_id = auth.uid())
+  );
 
 drop policy if exists "transactions_update_own" on public.transactions;
 create policy "transactions_update_own" on public.transactions

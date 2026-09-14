@@ -1,19 +1,15 @@
 import { supabase } from './supabaseClient';
 import type { DbGoal, DbProfile, DbTransaction, DbTransactionType, GoalTypeId } from './types';
 
-/** A signed-in user has (for now) a single active goal — the most recently created one.
- * "Manage goals" already surfaces multi-goal as "coming soon", so this matches the app's
- * current scope; the schema itself has no such limit if that changes later. */
-export async function fetchActiveGoal(userId: string): Promise<DbGoal | null> {
+/** Every goal belonging to a user, most recently created first. */
+export async function fetchGoals(userId: string): Promise<DbGoal[]> {
   const { data, error } = await supabase
     .from('goals')
     .select('*')
     .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order('created_at', { ascending: false });
   if (error) throw error;
-  return data as DbGoal | null;
+  return (data as DbGoal[]) ?? [];
 }
 
 export async function fetchTransactions(goalId: string): Promise<DbTransaction[]> {
@@ -26,12 +22,26 @@ export async function fetchTransactions(goalId: string): Promise<DbTransaction[]
   return (data as DbTransaction[]) ?? [];
 }
 
+/** Every transaction across every one of a user's goals, in one round trip — used to derive
+ * each goal's saved amount (and the cross-goal dashboard totals) without an N+1 query per
+ * goal. RLS already scopes this to the caller's own rows. */
+export async function fetchAllTransactions(userId: string): Promise<DbTransaction[]> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data as DbTransaction[]) ?? [];
+}
+
 export interface CreateGoalInput {
   userId: string;
   name: string;
   goalType: GoalTypeId;
   targetAmount: number;
   targetDateISO: string;
+  color: string;
 }
 
 export async function createGoal(input: CreateGoalInput): Promise<DbGoal> {
@@ -44,7 +54,7 @@ export async function createGoal(input: CreateGoalInput): Promise<DbGoal> {
       target_amount: input.targetAmount,
       target_date: input.targetDateISO.slice(0, 10),
       icon: input.goalType,
-      color: '#0A84FF',
+      color: input.color,
     })
     .select('*')
     .single();
@@ -54,11 +64,19 @@ export async function createGoal(input: CreateGoalInput): Promise<DbGoal> {
 
 export async function updateGoal(
   goalId: string,
-  updates: Partial<Pick<DbGoal, 'name' | 'goal_type' | 'target_amount' | 'target_date' | 'icon'>>,
+  updates: Partial<Pick<DbGoal, 'name' | 'goal_type' | 'target_amount' | 'target_date' | 'icon' | 'color'>>,
 ): Promise<DbGoal> {
   const { data, error } = await supabase.from('goals').update(updates).eq('id', goalId).select('*').single();
   if (error) throw error;
   return data as DbGoal;
+}
+
+/** Deletes a goal and (via the schema's `on delete cascade`) every transaction logged
+ * against it. RLS's `goals_delete_own` policy guarantees this can only ever target a goal
+ * the caller owns. */
+export async function deleteGoal(goalId: string): Promise<void> {
+  const { error } = await supabase.from('goals').delete().eq('id', goalId);
+  if (error) throw error;
 }
 
 export interface AddTransactionInput {
@@ -83,6 +101,14 @@ export async function addTransaction(input: AddTransactionInput): Promise<DbTran
     .single();
   if (error) throw error;
   return data as DbTransaction;
+}
+
+/** Deletes a single transaction. RLS's `transactions_delete_own` policy scopes this to rows
+ * the caller owns; the goal's saved amount then simply re-derives lower on the next replay —
+ * there is no separately stored balance to reconcile. */
+export async function deleteTransaction(transactionId: string): Promise<void> {
+  const { error } = await supabase.from('transactions').delete().eq('id', transactionId);
+  if (error) throw error;
 }
 
 export async function fetchProfile(userId: string): Promise<DbProfile | null> {

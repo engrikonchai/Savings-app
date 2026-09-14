@@ -1,6 +1,6 @@
 import React from 'react';
 import { Shell } from '../components/Shell';
-import { BrandMark } from '../components/Icon';
+import { BrandMark, OlyviMark } from '../components/Icon';
 
 export const LoadingScreen: React.FC<{ label?: string }> = ({ label = 'Loadingâ€¦' }) => (
   <Shell>
@@ -19,6 +19,10 @@ export const LoadingScreen: React.FC<{ label?: string }> = ({ label = 'Loadingâ€
         <BrandMark bg="var(--blue)" bar="var(--on-blue)" size={52} />
       </div>
       <span style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
+      <div style={{ position: 'absolute', bottom: 40, display: 'flex', alignItems: 'center', gap: 5 }}>
+        <OlyviMark size={11} color="var(--text-tertiary)" />
+        <span style={{ fontSize: 11, color: 'var(--text-tertiary)', letterSpacing: '0.02em' }}>by OLYVI</span>
+      </div>
     </div>
   </Shell>
 );

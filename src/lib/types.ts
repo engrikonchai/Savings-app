@@ -3,6 +3,9 @@ export type GoalTypeId = 'car' | 'travel' | 'phone' | 'gaming' | 'education' | '
 export type ThemeMode = 'system' | 'light' | 'dark';
 
 export interface Goal {
+  /** Cloud goal id (the `goals.id` row). Demo/guest goals use a fixed placeholder id since
+   * there's only ever one and it's never persisted. */
+  id: string;
   typeId: GoalTypeId;
   name: string;
   targetAmount: number;
@@ -11,6 +14,9 @@ export interface Goal {
    * earlier or later as money is added or Dream Days purchases are logged. */
   predictedDate: string;
   createdAt: string;
+  /** Accent color for this goal (hex). Purely a per-goal accent used in the goals list —
+   * the app's own chrome stays iOS blue regardless of a goal's color. */
+  color: string;
 }
 
 export type TransactionKind = 'contribution' | 'skip' | 'purchase';
@@ -29,13 +35,22 @@ export interface Transaction {
 
 export interface AppState {
   onboarded: boolean;
+  /** All of the signed-in user's goals (or just the one demo goal in guest mode), most
+   * recently created first. */
+  goals: Goal[];
+  /** The goal currently shown on Dashboard/Add Money/Dream Days/History/Insights. */
   goal: Goal | null;
+  /** Transactions for `goal` only — see `goals` above for the full multi-goal list. */
   transactions: Transaction[];
   currency: string;
   themeMode: ThemeMode;
   notifEnabled: boolean;
   celebrationSeen: boolean;
   profileName: string;
+  /** True forever, on this device, once the user has ever finished creating a goal — used to
+   * tell "brand new account" (show the Welcome intro) apart from "just deleted their last
+   * goal" (go straight back to goal creation, no re-intro) without needing a network round trip. */
+  hasCreatedGoalBefore: boolean;
 }
 
 export const STORAGE_KEY = 'savings-app-state-v1';

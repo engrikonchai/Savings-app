@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { AppState, DbGoal, DbTransaction, Goal, GoalTypeId, ThemeMode, Transaction } from '../lib/types';
 import { DEFAULT_STATE, loadState, saveState } from '../lib/storage';
-import { addDays, clampFutureDate, computePace, daysWorth, replayGoal, weeksBetween } from '../lib/calc';
-import { goalTypeDef } from '../lib/goalTypes';
+import { addDays, aggregateTotals, clampFutureDate, computePace, daysWorth, replayGoal, weeksBetween, type Totals } from '../lib/calc';
+import { DEFAULT_GOAL_COLOR } from '../lib/goalColors';
 import { useAuth } from './AuthContext';
 import * as db from '../lib/db';
 
@@ -12,10 +12,22 @@ interface NewGoalInput {
   targetAmount: number;
   currentSaved: number;
   predictedDate: string;
+  color?: string;
+}
+
+interface GoalEditInput {
+  name?: string;
+  targetAmount?: number;
+  predictedDate?: string;
+  color?: string;
+  typeId?: GoalTypeId;
 }
 
 interface Ctx {
   state: AppState;
+  /** Cross-goal totals — always summed fresh from every goal's transaction-derived saved
+   * amount, never a separately stored figure. */
+  totals: Totals;
   today: Date;
   /** True when there's no signed-in user — the app is showing local, throwaway preview
    * data ("My First Car") rather than anything backed by Supabase. */
@@ -26,14 +38,20 @@ interface Ctx {
   dataLoading: boolean;
   dataError: string | null;
   clearDataError: () => void;
+  /** True once the initial load has failed outright (no goals could be fetched at all) —
+   * distinct from dataError, which also covers errors during normal use after a successful load. */
+  loadFailed: boolean;
+  retryLoad: () => void;
   /** Resolves true on success — callers should check this rather than reading dataError
    * right after awaiting, since that state won't have re-rendered into their closure yet. */
   createGoal: (input: NewGoalInput) => Promise<boolean>;
-  editGoal: (updates: Partial<Pick<Goal, 'name' | 'targetAmount' | 'predictedDate'>>) => Promise<void>;
-  switchGoalType: (typeId: GoalTypeId) => Promise<void>;
+  editGoal: (goalId: string, updates: GoalEditInput) => Promise<boolean>;
+  deleteGoal: (goalId: string) => Promise<boolean>;
+  selectGoal: (goalId: string) => void;
   addContribution: (amount: number, source: string) => Promise<Transaction>;
   addSkip: (amount: number, itemName: string) => Promise<Transaction>;
   addPurchase: (amount: number, itemName: string) => Promise<Transaction>;
+  deleteTransaction: (transactionId: string) => Promise<boolean>;
   setThemeMode: (mode: ThemeMode) => void;
   setCurrency: (code: string) => void;
   toggleNotif: () => void;
@@ -48,12 +66,14 @@ const AppCtx = createContext<Ctx | null>(null);
 // ---- Supabase and is never the source of a real user's data (see DEMO_GOAL below). -------
 
 const DEMO_GOAL: Goal = {
+  id: 'demo-goal',
   typeId: 'car',
   name: 'My First Car',
   targetAmount: 3500,
   currentSaved: 1800,
   predictedDate: new Date(new Date().getFullYear() + 1, 8, 15).toISOString(),
   createdAt: new Date().toISOString(),
+  color: DEFAULT_GOAL_COLOR,
 };
 
 function demoTx(kind: Transaction['kind'], label: string, amount: number, daysAgo: number, daysDelta: number): Transaction {
@@ -69,7 +89,7 @@ const DEMO_TRANSACTIONS: Transaction[] = [
 ];
 
 function demoState(base: AppState): AppState {
-  return { ...base, onboarded: true, goal: DEMO_GOAL, transactions: DEMO_TRANSACTIONS };
+  return { ...base, onboarded: true, goals: [DEMO_GOAL], goal: DEMO_GOAL, transactions: DEMO_TRANSACTIONS };
 }
 
 // ---- Local reducer: still used to hold device-local prefs (currency, theme, notifications,
@@ -82,6 +102,7 @@ type Action =
   | { type: 'TOGGLE_NOTIF' }
   | { type: 'SET_PROFILE_NAME'; payload: string }
   | { type: 'MARK_CELEBRATION_SEEN' }
+  | { type: 'MARK_HAS_CREATED_GOAL' }
   | { type: 'RESET' };
 
 function reducer(state: AppState, action: Action): AppState {
@@ -104,9 +125,11 @@ function reducer(state: AppState, action: Action): AppState {
         date: today.toISOString(),
         daysDelta,
       };
+      const nextGoal: Goal = { ...state.goal, currentSaved: nextSaved, predictedDate: nextPredicted.toISOString() };
       return {
         ...state,
-        goal: { ...state.goal, currentSaved: nextSaved, predictedDate: nextPredicted.toISOString() },
+        goal: nextGoal,
+        goals: state.goals.map((g) => (g.id === nextGoal.id ? nextGoal : g)),
         transactions: [tx, ...state.transactions],
       };
     }
@@ -120,6 +143,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, profileName: action.payload };
     case 'MARK_CELEBRATION_SEEN':
       return { ...state, celebrationSeen: true };
+    case 'MARK_HAS_CREATED_GOAL':
+      return { ...state, hasCreatedGoalBefore: true };
     case 'RESET':
       return { ...DEFAULT_STATE };
     default:
@@ -138,13 +163,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [local]);
   const setLocal = (updater: (s: AppState) => AppState) => dispatch(updater);
 
-  // Cloud cache: the raw rows for the signed-in user's single active goal. `state.goal` /
-  // `state.transactions` are derived from these via replayGoal — never stored directly.
-  const [cloudGoal, setCloudGoal] = useState<DbGoal | null>(null);
-  const [cloudTx, setCloudTx] = useState<DbTransaction[]>([]);
+  // Cloud cache: every one of the signed-in user's goals, plus every transaction across all
+  // of them (grouped by goal_id). `state.goals` / `state.goal` / `state.transactions` are
+  // derived from these via replayGoal — never stored directly.
+  const [cloudGoals, setCloudGoals] = useState<DbGoal[]>([]);
+  const [cloudTxByGoal, setCloudTxByGoal] = useState<Record<string, DbTransaction[]>>({});
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [profileName, setProfileNameState] = useState<string>('You');
   // Two distinct loading flags on purpose: `initialLoading` covers only the one-time fetch of
-  // an existing user's goal/transactions/profile after sign-in (App.tsx uses this — and only
+  // an existing user's goals/transactions/profile after sign-in (App.tsx uses this — and only
   // this — to decide whether to show a full-screen spinner before the onboarding-vs-dashboard
   // decision). `dataLoading` covers in-flight writes (createGoal, editGoal, transactions) and
   // is surfaced to individual screens for their own inline "Saving…" states. Conflating the
@@ -153,31 +180,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [initialLoading, setInitialLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     if (!user) {
-      setCloudGoal(null);
-      setCloudTx([]);
+      setCloudGoals([]);
+      setCloudTxByGoal({});
+      setSelectedGoalId(null);
+      setLoadFailed(false);
       return;
     }
     let cancelled = false;
     setInitialLoading(true);
+    setLoadFailed(false);
     setDataError(null);
     (async () => {
       try {
-        const [goal, profile] = await Promise.all([db.fetchActiveGoal(user.id), db.fetchProfile(user.id)]);
+        const [goals, profile] = await Promise.all([db.fetchGoals(user.id), db.fetchProfile(user.id)]);
         if (cancelled) return;
-        setCloudGoal(goal);
+        setCloudGoals(goals);
         setProfileNameState(profile?.display_name || user.email?.split('@')[0] || 'You');
-        if (goal) {
-          const tx = await db.fetchTransactions(goal.id);
+        setSelectedGoalId((prev) => (prev && goals.some((g) => g.id === prev) ? prev : goals[0]?.id ?? null));
+        if (goals.length > 0) {
+          const allTx = await db.fetchAllTransactions(user.id);
           if (cancelled) return;
-          setCloudTx(tx);
+          const byGoal: Record<string, DbTransaction[]> = {};
+          for (const tx of allTx) {
+            (byGoal[tx.goal_id] ??= []).push(tx);
+          }
+          setCloudTxByGoal(byGoal);
         } else {
-          setCloudTx([]);
+          setCloudTxByGoal({});
         }
       } catch (e) {
-        if (!cancelled) setDataError(e instanceof Error ? e.message : 'Could not load your data.');
+        if (!cancelled) {
+          setDataError(e instanceof Error ? e.message : 'Could not load your data.');
+          setLoadFailed(true);
+        }
       } finally {
         if (!cancelled) setInitialLoading(false);
       }
@@ -185,26 +225,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, loadAttempt]);
 
   const isDemoMode = !user;
 
+  const replayedGoals = useMemo(
+    () => cloudGoals.map((g) => replayGoal(g, cloudTxByGoal[g.id] ?? []).goal),
+    [cloudGoals, cloudTxByGoal],
+  );
+
   const effectiveState: AppState = useMemo(() => {
     if (isDemoMode) return demoState(local);
-    if (!cloudGoal) return { ...local, onboarded: false, goal: null, transactions: [], profileName };
-    const { goal, transactions } = replayGoal(cloudGoal, cloudTx);
-    return { ...local, onboarded: true, goal, transactions, profileName };
-  }, [isDemoMode, local, cloudGoal, cloudTx, profileName]);
+    if (replayedGoals.length === 0) return { ...local, onboarded: false, goals: [], goal: null, transactions: [], profileName };
+    const selected = replayedGoals.find((g) => g.id === selectedGoalId) ?? replayedGoals[0];
+    const selectedDbGoal = cloudGoals.find((g) => g.id === selected.id);
+    const transactions = selectedDbGoal ? replayGoal(selectedDbGoal, cloudTxByGoal[selectedDbGoal.id] ?? []).transactions : [];
+    return { ...local, onboarded: true, goals: replayedGoals, goal: selected, transactions, profileName };
+  }, [isDemoMode, local, replayedGoals, cloudGoals, cloudTxByGoal, selectedGoalId, profileName]);
+
+  const totals = useMemo(() => aggregateTotals(effectiveState.goals), [effectiveState.goals]);
 
   const value = useMemo<Ctx>(
     () => ({
       state: effectiveState,
+      totals,
       today,
       isDemoMode,
       initialLoading,
       dataLoading,
       dataError,
       clearDataError: () => setDataError(null),
+      loadFailed,
+      retryLoad: () => setLoadAttempt((n) => n + 1),
 
       createGoal: async (input) => {
         if (isDemoMode || !user) {
@@ -222,12 +274,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             goalType: input.typeId,
             targetAmount: input.targetAmount,
             targetDateISO: input.predictedDate,
+            color: input.color || DEFAULT_GOAL_COLOR,
           });
           // Hold off committing the goal to state until the optional starting-balance
           // transaction has *also* landed, and set both together. Committing the goal alone
-          // first would make state.goal go non-null one network round-trip before this
-          // function (and thus the onboarding flow awaiting it) actually resolves — a window
-          // where a caller watching "does a goal exist yet" would get a premature yes.
+          // first would make a goal go live one network round-trip before this function (and
+          // thus the onboarding flow awaiting it) actually resolves — a window where a caller
+          // watching "does a goal exist yet" would get a premature yes.
           const tx =
             input.currentSaved > 0
               ? await db.addTransaction({
@@ -238,8 +291,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   note: 'Starting balance',
                 })
               : null;
-          setCloudGoal(goal);
-          setCloudTx(tx ? [tx] : []);
+          setCloudGoals((prev) => [goal, ...prev]);
+          if (tx) setCloudTxByGoal((prev) => ({ ...prev, [goal.id]: [tx] }));
+          setSelectedGoalId(goal.id);
+          setLocal((s) => reducer(s, { type: 'MARK_HAS_CREATED_GOAL' }));
           return true;
         } catch (e) {
           setDataError(e instanceof Error ? e.message : 'Could not create your goal.');
@@ -249,40 +304,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       },
 
-      editGoal: async (updates) => {
+      editGoal: async (goalId, updates) => {
         if (isDemoMode) {
-          setLocal((s) => (s.goal ? { ...s, goal: { ...s.goal, ...updates } } : s));
-          return;
+          setLocal((s) =>
+            s.goal && s.goal.id === goalId
+              ? { ...s, goal: { ...s.goal, ...updates }, goals: s.goals.map((g) => (g.id === goalId ? { ...g, ...updates } : g)) }
+              : s,
+          );
+          return true;
         }
-        if (!cloudGoal) return;
         setDataError(null);
         try {
-          const patch: Partial<Pick<DbGoal, 'name' | 'target_amount' | 'target_date'>> = {};
+          const patch: Partial<Pick<DbGoal, 'name' | 'target_amount' | 'target_date' | 'color' | 'goal_type' | 'icon'>> = {};
           if (updates.name !== undefined) patch.name = updates.name;
           if (updates.targetAmount !== undefined) patch.target_amount = updates.targetAmount;
           if (updates.predictedDate !== undefined) patch.target_date = updates.predictedDate.slice(0, 10);
-          const goal = await db.updateGoal(cloudGoal.id, patch);
-          setCloudGoal(goal);
+          if (updates.color !== undefined) patch.color = updates.color;
+          if (updates.typeId !== undefined) {
+            patch.goal_type = updates.typeId;
+            patch.icon = updates.typeId;
+          }
+          const goal = await db.updateGoal(goalId, patch);
+          setCloudGoals((prev) => prev.map((g) => (g.id === goalId ? goal : g)));
+          return true;
         } catch (e) {
           setDataError(e instanceof Error ? e.message : 'Could not save your changes.');
+          return false;
         }
       },
 
-      switchGoalType: async (typeId) => {
-        const def = goalTypeDef(typeId);
+      deleteGoal: async (goalId) => {
         if (isDemoMode) {
-          setLocal((s) => (s.goal ? { ...s, goal: { ...s.goal, typeId, name: def.defaultName } } : s));
-          return;
+          setDataError('Sign in to manage real goals.');
+          return false;
         }
-        if (!cloudGoal) return;
         setDataError(null);
         try {
-          const goal = await db.updateGoal(cloudGoal.id, { goal_type: typeId, name: def.defaultName, icon: typeId });
-          setCloudGoal(goal);
+          await db.deleteGoal(goalId);
+          setCloudGoals((prev) => prev.filter((g) => g.id !== goalId));
+          setCloudTxByGoal((prev) => {
+            const next = { ...prev };
+            delete next[goalId];
+            return next;
+          });
+          setSelectedGoalId((prev) => (prev === goalId ? null : prev));
+          return true;
         } catch (e) {
-          setDataError(e instanceof Error ? e.message : 'Could not switch goal type.');
+          setDataError(e instanceof Error ? e.message : 'Could not delete that goal.');
+          return false;
         }
       },
+
+      selectGoal: (goalId) => setSelectedGoalId(goalId),
 
       addContribution: async (amount, source) => {
         if (isDemoMode) {
@@ -290,7 +363,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setLocal((s) => reducer(s, { type: 'DEMO_ADD_TRANSACTION', payload: { kind: 'contribution', amount, label: source, today } }));
           return tx;
         }
-        return cloudAddTransaction(user!.id, cloudGoal, setCloudGoal, cloudTx, setCloudTx, setDataError, {
+        return cloudAddTransaction(user!.id, effectiveState.goal, cloudGoals, setCloudGoals, cloudTxByGoal, setCloudTxByGoal, setDataError, {
           kind: 'contribution',
           amount,
           note: source,
@@ -305,7 +378,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setLocal((s) => reducer(s, { type: 'DEMO_ADD_TRANSACTION', payload: { kind: 'skip', amount, label, today } }));
           return tx;
         }
-        return cloudAddTransaction(user!.id, cloudGoal, setCloudGoal, cloudTx, setCloudTx, setDataError, {
+        return cloudAddTransaction(user!.id, effectiveState.goal, cloudGoals, setCloudGoals, cloudTxByGoal, setCloudTxByGoal, setDataError, {
           kind: 'skip',
           amount,
           note: label,
@@ -320,12 +393,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setLocal((s) => reducer(s, { type: 'DEMO_ADD_TRANSACTION', payload: { kind: 'purchase', amount, label, today } }));
           return tx;
         }
-        return cloudAddTransaction(user!.id, cloudGoal, setCloudGoal, cloudTx, setCloudTx, setDataError, {
+        return cloudAddTransaction(user!.id, effectiveState.goal, cloudGoals, setCloudGoals, cloudTxByGoal, setCloudTxByGoal, setDataError, {
           kind: 'purchase',
           amount,
           note: label,
           dbType: 'withdrawal',
         });
+      },
+
+      deleteTransaction: async (transactionId) => {
+        if (isDemoMode) {
+          setDataError('Sign in to edit real transaction history.');
+          return false;
+        }
+        setDataError(null);
+        try {
+          await db.deleteTransaction(transactionId);
+          setCloudTxByGoal((prev) => {
+            const next: Record<string, DbTransaction[]> = {};
+            for (const [goalId, txs] of Object.entries(prev)) next[goalId] = txs.filter((t) => t.id !== transactionId);
+            return next;
+          });
+          return true;
+        } catch (e) {
+          setDataError(e instanceof Error ? e.message : 'Could not delete that transaction.');
+          return false;
+        }
       },
 
       setThemeMode: (mode) => setLocal((s) => reducer(s, { type: 'SET_THEME', payload: mode })),
@@ -345,7 +438,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       markCelebrationSeen: () => setLocal((s) => reducer(s, { type: 'MARK_CELEBRATION_SEEN' })),
       resetApp: () => setLocal(() => ({ ...DEFAULT_STATE })),
     }),
-    [effectiveState, today, isDemoMode, initialLoading, dataLoading, dataError, user, cloudGoal, cloudTx],
+    [effectiveState, totals, today, isDemoMode, initialLoading, dataLoading, dataError, loadFailed, user, cloudGoals, cloudTxByGoal],
   );
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
@@ -366,24 +459,25 @@ function previewTx(goal: Goal | null, kind: Transaction['kind'], amount: number,
 
 async function cloudAddTransaction(
   userId: string,
-  cloudGoal: DbGoal | null,
-  setCloudGoal: React.Dispatch<React.SetStateAction<DbGoal | null>>,
-  cloudTx: DbTransaction[],
-  setCloudTx: React.Dispatch<React.SetStateAction<DbTransaction[]>>,
+  goal: Goal | null,
+  cloudGoals: DbGoal[],
+  setCloudGoals: React.Dispatch<React.SetStateAction<DbGoal[]>>,
+  cloudTxByGoal: Record<string, DbTransaction[]>,
+  setCloudTxByGoal: React.Dispatch<React.SetStateAction<Record<string, DbTransaction[]>>>,
   setDataError: (msg: string | null) => void,
   input: { kind: Transaction['kind']; amount: number; note: string; dbType: 'deposit' | 'withdrawal' },
 ): Promise<Transaction> {
-  if (!cloudGoal) {
+  const dbGoal = goal ? cloudGoals.find((g) => g.id === goal.id) : undefined;
+  if (!goal || !dbGoal) {
     setDataError('No active goal to record this against.');
     return { id: 'error', kind: input.kind, label: input.note, amount: input.amount, date: new Date().toISOString(), daysDelta: 0 };
   }
-  const before = replayGoal(cloudGoal, cloudTx).goal;
   const today = new Date();
   setDataError(null);
   try {
-    const row = await db.addTransaction({ userId, goalId: cloudGoal.id, amount: input.amount, type: input.dbType, note: input.note });
-    setCloudTx((prev) => [row, ...prev]);
-    const pace = computePace(before, today);
+    const row = await db.addTransaction({ userId, goalId: dbGoal.id, amount: input.amount, type: input.dbType, note: input.note });
+    setCloudTxByGoal((prev) => ({ ...prev, [dbGoal.id]: [row, ...(prev[dbGoal.id] ?? [])] }));
+    const pace = computePace(goal, today);
     const delta = daysWorth(input.amount, pace.weekly);
     return {
       id: row.id,

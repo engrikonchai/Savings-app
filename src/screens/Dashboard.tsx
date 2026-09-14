@@ -18,7 +18,7 @@ interface Props {
 }
 
 export const Dashboard: React.FC<Props> = ({ onNavigate, onAddMoney, onDreamDays, onPreviewCelebration, onCelebrate }) => {
-  const { state, today } = useApp();
+  const { state, totals, today, selectGoal } = useApp();
   const goal = state.goal!;
   const pace = computePace(goal, today);
   const symbol = currencySymbol(state.currency);
@@ -26,6 +26,7 @@ export const Dashboard: React.FC<Props> = ({ onNavigate, onAddMoney, onDreamDays
   const isComplete = pace.pct >= 100;
   const targetLabel = formatMonthYear(new Date(goal.predictedDate));
   const recent = state.transactions.slice(0, 3);
+  const hasMultipleGoals = state.goals.length > 1;
 
   return (
     <Shell showWordmark bottomSlot={<BottomNav active="dashboard" onNavigate={onNavigate} />}>
@@ -33,7 +34,37 @@ export const Dashboard: React.FC<Props> = ({ onNavigate, onAddMoney, onDreamDays
         <div style={{ fontSize: 11, letterSpacing: '0.08em', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 4 }}>
           Your goal
         </div>
-        <div style={{ fontSize: 27, fontWeight: 800, letterSpacing: '-0.01em', color: 'var(--text)', marginBottom: 26 }}>{goal.name}</div>
+        <div style={{ fontSize: 27, fontWeight: 800, letterSpacing: '-0.01em', color: 'var(--text)', marginBottom: hasMultipleGoals ? 12 : 26 }}>{goal.name}</div>
+
+        {hasMultipleGoals && (
+          <>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginBottom: 10, marginLeft: -28, marginRight: -28, paddingLeft: 28, paddingRight: 28 }}>
+              {state.goals.map((g) => {
+                const selected = g.id === goal.id;
+                return (
+                  <div
+                    key={g.id}
+                    onClick={() => selectGoal(g.id)}
+                    role="button"
+                    style={{
+                      flexShrink: 0,
+                      padding: '7px 14px',
+                      borderRadius: 9999,
+                      background: selected ? 'var(--blue)' : 'var(--chip-bg)',
+                      border: `1px solid ${selected ? 'var(--blue)' : 'var(--chip-border)'}`,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 600, color: selected ? 'var(--on-blue)' : 'var(--text)' }}>{g.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 22 }}>
+              All goals: {formatMoney(totals.saved, symbol)} of {formatMoney(totals.target, symbol)} · {totals.pct}%
+            </div>
+          </>
+        )}
 
         <div style={{ position: 'relative', width: 196, height: 196, margin: '0 auto 22px' }}>
           <svg width="196" height="196" viewBox="0 0 196 196" style={{ transform: 'rotate(-90deg)', position: 'absolute', inset: 0 }}>

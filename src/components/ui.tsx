@@ -1,4 +1,6 @@
 import React from 'react';
+import { GOAL_COLORS } from '../lib/goalColors';
+import { CheckIcon } from './Icon';
 
 export const SectionLabel: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({
   children,
@@ -63,6 +65,43 @@ export const Card: React.FC<{ children: React.ReactNode; style?: React.CSSProper
     }}
   >
     {children}
+  </div>
+);
+
+interface ColorPickerProps {
+  value: string;
+  onChange: (color: string) => void;
+}
+
+/** A row of accent-color swatches for a goal — cosmetic only (see lib/goalColors.ts), never
+ * re-themes the app itself. */
+export const ColorPicker: React.FC<ColorPickerProps> = ({ value, onChange }) => (
+  <div style={{ display: 'flex', gap: 12 }}>
+    {GOAL_COLORS.map((c) => {
+      const selected = c === value;
+      return (
+        <div
+          key={c}
+          onClick={() => onChange(c)}
+          role="button"
+          aria-label={`Color ${c}`}
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 9999,
+            background: c,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: selected ? `0 0 0 2px var(--bg), 0 0 0 4px ${c}` : 'none',
+            flexShrink: 0,
+          }}
+        >
+          {selected && <CheckIcon color="#FFFFFF" size={13} />}
+        </div>
+      );
+    })}
   </div>
 );
 

@@ -10,9 +10,15 @@ interface AuthCtx {
   /** Whether real Supabase credentials are configured at all — when false, sign-in is
    * unavailable and the app runs in guest/demo mode only. */
   configured: boolean;
+  /** True from the moment the user opens a password-reset email link until they set a new
+   * password (or cancel) — see ResetPassword.tsx. Takes priority over normal auth routing. */
+  passwordRecovery: boolean;
+  clearPasswordRecovery: () => void;
   signUp: (email: string, password: string) => Promise<{ error: string | null; needsEmailConfirmation: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: string | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
 }
 
 const Ctx = createContext<AuthCtx | null>(null);
@@ -20,6 +26,7 @@ const Ctx = createContext<AuthCtx | null>(null);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(supabaseConfigured);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   useEffect(() => {
     if (!supabaseConfigured) return;
@@ -31,9 +38,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAuthLoading(false);
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
       setAuthLoading(false);
+      // Supabase signs the user into a temporary "recovery" session when they follow the
+      // password-reset email link — surface that so the app can force a "set new password"
+      // screen instead of dropping them straight into their account.
+      if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true);
     });
 
     return () => {
@@ -48,6 +59,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       session,
       user: session?.user ?? null,
       configured: supabaseConfigured,
+      passwordRecovery,
+      clearPasswordRecovery: () => setPasswordRecovery(false),
       signUp: async (email, password) => {
         if (!supabaseConfigured) return { error: 'Sign-up is not available yet.', needsEmailConfirmation: false };
         const { data, error } = await supabase.auth.signUp({ email, password });
@@ -65,8 +78,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!supabaseConfigured) return;
         await supabase.auth.signOut();
       },
+      resetPassword: async (email) => {
+        if (!supabaseConfigured) return { error: 'Password reset is not available yet.' };
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+        return { error: error ? error.message : null };
+      },
+      updatePassword: async (newPassword) => {
+        if (!supabaseConfigured) return { error: 'Password reset is not available yet.' };
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (!error) setPasswordRecovery(false);
+        return { error: error ? error.message : null };
+      },
     }),
-    [authLoading, session],
+    [authLoading, session, passwordRecovery],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

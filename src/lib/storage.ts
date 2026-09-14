@@ -3,6 +3,7 @@ import { STORAGE_KEY } from './types';
 
 export const DEFAULT_STATE: AppState = {
   onboarded: false,
+  goals: [],
   goal: null,
   transactions: [],
   currency: 'EUR',
@@ -10,6 +11,7 @@ export const DEFAULT_STATE: AppState = {
   notifEnabled: true,
   celebrationSeen: false,
   profileName: 'You',
+  hasCreatedGoalBefore: false,
 };
 
 export function loadState(): AppState {

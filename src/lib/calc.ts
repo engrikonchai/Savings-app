@@ -1,4 +1,5 @@
 import type { DbGoal, DbTransaction, Goal, Transaction } from './types';
+import { DEFAULT_GOAL_COLOR } from './goalColors';
 
 const DAY_MS = 86_400_000;
 const WEEK_MS = 7 * DAY_MS;
@@ -70,6 +71,21 @@ export function clampFutureDate(d: Date, today: Date): Date {
   return d.getTime() < tomorrow.getTime() ? tomorrow : d;
 }
 
+export interface Totals {
+  saved: number;
+  target: number;
+  pct: number;
+}
+
+/** Dashboard/Goals-list totals across every one of a user's goals — always summed fresh from
+ * each goal's own (transaction-derived) currentSaved, never a separately stored figure. */
+export function aggregateTotals(goals: Goal[]): Totals {
+  const saved = goals.reduce((sum, g) => sum + g.currentSaved, 0);
+  const target = goals.reduce((sum, g) => sum + g.targetAmount, 0);
+  const pct = target > 0 ? Math.min(100, Math.round((saved / target) * 100)) : 0;
+  return { saved, target, pct };
+}
+
 export function formatMoney(amount: number, symbol: string): string {
   const sign = amount < 0 ? '-' : '';
   const rounded = Math.round(Math.abs(amount));
@@ -129,12 +145,14 @@ export function replayGoal(dbGoal: DbGoal, dbTransactions: DbTransaction[]): Rep
   }
 
   const goal: Goal = {
+    id: dbGoal.id,
     typeId: dbGoal.goal_type,
     name: dbGoal.name,
     targetAmount: dbGoal.target_amount,
     currentSaved: saved,
     predictedDate: predicted.toISOString(),
     createdAt: dbGoal.created_at,
+    color: dbGoal.color || DEFAULT_GOAL_COLOR,
   };
 
   // Most-recent-first for display (History, Recent Activity).
